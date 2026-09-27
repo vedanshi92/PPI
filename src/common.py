@@ -252,10 +252,16 @@ def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame | None:
                 if attempt < WDI_RETRIES:
                     print(f"[WDI]   {code}: attempt {attempt} failed ({type(exc).__name__}), retrying...")
                     continue
-                warnings.warn(f"[WDI] API request failed for {code}: {type(exc).__name__}: {exc}\n"
-                              f"Check your internet connection (api.worldbank.org must be reachable), "
-                              f"or that the code is a valid World Bank series code.")
-                return None
+                # Leave just this series blank (the column is added back below) rather
+                # than throwing away the series that did download.
+                warnings.warn(f"[WDI] API request failed for {code} after {WDI_RETRIES} attempts: "
+                              f"{type(exc).__name__}: {exc}\n"
+                              f"'{indicators[code]}' will be blank. Check your internet connection "
+                              f"(api.worldbank.org must be reachable), or that the code is a valid "
+                              f"World Bank series code.")
+
+    if not frames:
+        return None
 
     raw = pd.concat(frames, axis=1)
 
