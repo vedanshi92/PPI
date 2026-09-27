@@ -1,14 +1,14 @@
 """
 common.py
 ---------
-Shared building blocks used by both build_project_panel.py and the later
-country-year aggregation script: country-code harmonization and loaders for
-ND-GAIN, WGI, and live WDI data. Kept separate so neither script has to
+Shared building blocks used by the pipeline steps: country-code harmonization and
+loaders for ND-GAIN, WGI, and live WDI data. Kept separate so no step has to
 duplicate this logic.
 """
 
 import sys
 import warnings
+from functools import lru_cache
 
 import pandas as pd
 
@@ -31,8 +31,10 @@ except ImportError:
     )
 
 
-# Common World Bank / ND-GAIN naming variants that pycountry's fuzzy search won't catch.
-# Add to this as your merge diagnostics reveal more mismatches.
+# World Bank / PPI naming variants that pycountry won't resolve (or resolves WRONGLY
+# via fuzzy search — e.g. fuzzy "Niger" returns Nigeria, and "Kosovo" returns Serbia).
+# Codes follow the World Bank convention (e.g. Kosovo = XKX), which is what WGI and
+# WDI use. Add to this as your merge diagnostics reveal more mismatches.
 MANUAL_ISO3_FIXES = {
     "korea, rep.": "KOR",
     "south korea": "KOR",
@@ -57,7 +59,9 @@ MANUAL_ISO3_FIXES = {
     "turkiye": "TUR",
     "turkey": "TUR",
     "cote d'ivoire": "CIV",
+    "côte d'ivoire": "CIV",
     "cabo verde": "CPV",
+    "cape verde": "CPV",
     "brunei darussalam": "BRN",
     "micronesia, fed. sts.": "FSM",
     "bolivia": "BOL",
@@ -69,23 +73,46 @@ MANUAL_ISO3_FIXES = {
     "hong kong sar, china": "HKG",
     "macao sar, china": "MAC",
     "taiwan, china": "TWN",
+    "niger": "NER",
+    "kosovo": "XKX",
+    "west bank and gaza": "PSE",
+    "faeroe islands": "FRO",
+    "faroe islands": "FRO",
+    "guyana, cr": "GUY",
+    "macedonia, fyr": "MKD",
+    "north macedonia": "MKD",
+    "czech republic": "CZE",
+    "são tomé and principe": "STP",
+    "sao tome and principe": "STP",
 }
 
 
+@lru_cache(maxsize=None)
 def name_to_iso3(name: str) -> str | None:
-    """Best-effort country name -> ISO3 conversion."""
+    """Country name -> ISO3. Tries, in order: the manual dictionary, an EXACT
+    pycountry lookup (name / official name / code), and only then pycountry's fuzzy
+    search. Fuzzy matches are printed so they can be checked by eye, since fuzzy
+    search is what produced errors like Niger -> Nigeria."""
     if not isinstance(name, str) or not name.strip():
         return None
-    key = name.strip().lower()
+    name = name.strip()
+    key = name.lower()
     if key in MANUAL_ISO3_FIXES:
         return MANUAL_ISO3_FIXES[key]
-    if pycountry is not None:
-        try:
-            match = pycountry.countries.search_fuzzy(name)
-            if match:
-                return match[0].alpha_3
-        except LookupError:
-            pass
+    if pycountry is None:
+        return None
+    try:
+        return pycountry.countries.lookup(name).alpha_3
+    except LookupError:
+        pass
+    try:
+        match = pycountry.countries.search_fuzzy(name)
+        if match:
+            print(f"  [ISO3] fuzzy match: '{name}' -> {match[0].alpha_3} ({match[0].name}) "
+                  f"— add to MANUAL_ISO3_FIXES if wrong")
+            return match[0].alpha_3
+    except LookupError:
+        pass
     return None
 
 
@@ -124,9 +151,10 @@ def load_nd_gain(path, country_col="ISO3", year_col="Year",
         sys.exit(f"[ND-GAIN] Could not find a country/ISO3 column. "
                   f"Columns found: {list(df.columns)}.")
 
+    df = df.dropna(subset=["iso3", "year"])
     df["iso3"] = df["iso3"].astype(str).str.upper().str.strip()
-    df = df.dropna(subset=["year"])
     df["year"] = df["year"].astype(int)
+    df["nd_gain_value"] = pd.to_numeric(df["nd_gain_value"], errors="coerce")
 
     panel = df.groupby(["iso3", "year"], as_index=False)["nd_gain_value"].mean()
 
@@ -136,35 +164,26 @@ def load_nd_gain(path, country_col="ISO3", year_col="Year",
     return panel
 
 
-def load_wgi(path, sheet_indicators=None,
+def load_wgi(path, sheet_indicators,
              country_code_col="Economy (code)", year_col="Year",
              estimate_col="Governance estimate (approx. -2.5 to +2.5)") -> pd.DataFrame:
-    """Loads the official multi-sheet WGI Excel export (wgidataset.xlsx-style), where
-    each governance dimension is its own sheet ('va', 'pv', 'ge', 'rq', 'rl', 'cc'),
-    already in long format (one row per country-year). This is a different shape from
-    a WDI-style single wide CSV, so it's handled separately rather than reusing the
-    WDI-style wide-CSV parsing pattern."""
-    if sheet_indicators is None:
-        sheet_indicators = {
-            "va": "voice_accountability",
-            "pv": "political_stability",
-            "ge": "govt_effectiveness",
-            "rq": "regulatory_quality",
-            "rl": "rule_of_law",
-            "cc": "control_of_corruption",
-        }
+    """Loads the official multi-sheet WGI Excel export, where each governance dimension
+    is its own sheet ('va', 'pv', 'ge', 'rq', 'rl', 'cc'), already in long format (one
+    row per country-year). All sheets are read in a single pass — the workbook is large
+    and re-opening it once per sheet is slow."""
     if not path.exists():
         sys.exit(f"[WGI] File not found: {path}\n"
-                  f"Download from https://info.worldbank.org/governance/wgi/")
+                  f"Download from https://www.worldbank.org/en/publication/worldwide-governance-indicators")
+
+    try:
+        sheets = pd.read_excel(path, sheet_name=list(sheet_indicators))
+    except ValueError as exc:
+        sys.exit(f"[WGI] Couldn't read sheets {list(sheet_indicators)} from {path}: {exc}\n"
+                  f"Check the sheet names in your file and update wgi_sheet_indicators.")
 
     frames = []
     for sheet_name, friendly_name in sheet_indicators.items():
-        try:
-            sheet = pd.read_excel(path, sheet_name=sheet_name)
-        except ValueError as exc:
-            sys.exit(f"[WGI] Sheet '{sheet_name}' not found in {path}: {exc}\n"
-                      f"Check the sheet names in your file and update sheet_indicators.")
-
+        sheet = sheets[sheet_name]
         missing = [c for c in [country_code_col, year_col, estimate_col] if c not in sheet.columns]
         if missing:
             sys.exit(f"[WGI] Sheet '{sheet_name}' is missing expected column(s): {missing}\n"
@@ -175,27 +194,32 @@ def load_wgi(path, sheet_indicators=None,
             year_col: "year",
             estimate_col: friendly_name,
         })
+        # Missing estimates can appear as ".." or blank text in some WGI releases
+        sheet[friendly_name] = pd.to_numeric(sheet[friendly_name], errors="coerce")
+        sheet = sheet.dropna(subset=["iso3", "year"])
+        sheet["iso3"] = sheet["iso3"].astype(str).str.upper().str.strip()
+        sheet["year"] = sheet["year"].astype(int)
         frames.append(sheet)
 
     # Merge all six dimensions together, one column per dimension, on iso3+year
     wide = frames[0]
     for frame in frames[1:]:
-        wide = wide.merge(frame, on=["iso3", "year"], how="outer")
-
-    wide["iso3"] = wide["iso3"].astype(str).str.upper().str.strip()
-    wide = wide.dropna(subset=["year"])
-    wide["year"] = wide["year"].astype(int)
+        wide = wide.merge(frame, on=["iso3", "year"], how="outer", validate="1:1")
 
     print(f"[WGI] Loaded indicators {list(sheet_indicators.values())} "
-          f"for {wide['iso3'].nunique():,} countries.")
+          f"for {wide['iso3'].nunique():,} countries, "
+          f"years {wide['year'].min()}-{wide['year'].max()}.")
 
     return wide
 
 
-def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame:
+def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame | None:
+    """Pulls WDI series from the World Bank API. Returns None (instead of exiting) if
+    the API can't be reached, so the caller can decide whether to fall back to a
+    previously saved copy or carry on with WDI columns left blank."""
     if wb is None:
-        sys.exit("[WDI] wbgapi is not installed. Run `pip install wbgapi` inside your "
-                  "virtual environment, then re-run this script.")
+        warnings.warn("[WDI] wbgapi is not installed. Run `pip install wbgapi`.")
+        return None
 
     codes = list(indicators.keys())
     print(f"[WDI] Requesting {len(codes)} indicators from the World Bank API for "
@@ -212,14 +236,20 @@ def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame:
             skipAggs=True,
         )
     except Exception as exc:
-        sys.exit(f"[WDI] API request failed: {exc}\n"
-                  f"Check your internet connection, or that the codes are valid "
-                  f"World Bank series codes — look them up at "
-                  f"https://databank.worldbank.org/metadataglossary")
+        warnings.warn(f"[WDI] API request failed: {type(exc).__name__}: {exc}\n"
+                      f"Check your internet connection (api.worldbank.org must be reachable), "
+                      f"or that the codes are valid World Bank series codes.")
+        return None
 
     df = raw.reset_index().rename(columns={"economy": "iso3", "time": "year"})
     df = df.rename(columns=indicators)
+    # A series with no data at all in the window is dropped by skipBlanks — keep the
+    # column anyway so the output schema doesn't depend on what the API returned.
+    for name in indicators.values():
+        if name not in df.columns:
+            df[name] = pd.NA
     df["year"] = df["year"].astype(int)
+    df = df[["iso3", "year", *indicators.values()]]
 
     print(f"[WDI] Retrieved {list(indicators.values())} for {df['iso3'].nunique():,} countries.")
 
