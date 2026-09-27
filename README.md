@@ -75,7 +75,7 @@ column preserved, plus:
 - `iso3` — harmonized country code
 - `technology_category` — `renewable`, `non_renewable`, or `mixed` (both kinds listed, e.g.
   `"Coal, Hydro, Large (>50MW)"`), built from the `Technology` field using the keyword lists in
-  `CONFIG`. `Waste` is counted as non-renewable by default — a judgment call you can change there.
+  `CONFIG`. `Waste` is counted as renewable — a judgment call you can change there.
 - `is_renewable` (renewable or mixed), `is_pure_renewable` (renewable only),
   `n_renewable_keywords_matched` — convenience flags derived from the same classification
 - `sponsor_countries`, `sponsor_type`, `has_domestic_sponsor`, `has_international_sponsor` —

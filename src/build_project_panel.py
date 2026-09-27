@@ -56,11 +56,11 @@ CONFIG = {
 
     # Keywords used to classify the Technology field. Lowercased, substring match.
     # NOTE: "Waste" (waste-to-energy) is a genuine judgment call in the literature —
-    # it's counted as non-renewable here. Move "waste" to renewable_keywords if you
-    # want to count it as renewable instead.
+    # it's counted as renewable here. Move "waste" to nonrenewable_keywords if you
+    # want to count it as non-renewable instead.
     # NOTE: use "natural gas", not plain "gas" — "gas" would also match "biogas".
-    "renewable_keywords": ["solar", "wind", "hydro", "geothermal", "biomass", "biogas"],
-    "nonrenewable_keywords": ["coal", "diesel", "natural gas", "nuclear", "steam", "waste"],
+    "renewable_keywords": ["solar", "wind", "hydro", "geothermal", "biomass", "biogas", "waste"],
+    "nonrenewable_keywords": ["coal", "diesel", "natural gas", "nuclear", "steam"],
 
     # --- World Governance Indicators (WGI) ---
     # This expects the official multi-sheet WGI Excel export (one sheet per governance
