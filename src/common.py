@@ -213,6 +213,10 @@ def load_wgi(path, sheet_indicators,
     return wide
 
 
+WDI_TIMEOUT_SECONDS = 60   # per HTTP request
+WDI_RETRIES = 3
+
+
 def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame | None:
     """Pulls WDI series from the World Bank API. Returns None (instead of exiting) if
     the API can't be reached, so the caller can decide whether to fall back to a
@@ -225,21 +229,35 @@ def load_wdi_via_api(indicators, year_min, year_max) -> pd.DataFrame | None:
     print(f"[WDI] Requesting {len(codes)} indicators from the World Bank API for "
           f"{year_min}-{year_max} (needs an internet connection)...")
 
-    try:
-        raw = wb.data.DataFrame(
-            codes,
-            time=range(year_min, year_max + 1),
-            index=["economy", "time"],
-            columns="series",
-            numericTimeKeys=True,
-            skipBlanks=True,
-            skipAggs=True,
-        )
-    except Exception as exc:
-        warnings.warn(f"[WDI] API request failed: {type(exc).__name__}: {exc}\n"
-                      f"Check your internet connection (api.worldbank.org must be reachable), "
-                      f"or that the codes are valid World Bank series codes.")
-        return None
+    # wbgapi calls requests.get with no timeout, so a single stalled page can hang the
+    # whole step forever. Set a timeout and fetch one series at a time with retries.
+    wb.get_options["timeout"] = WDI_TIMEOUT_SECONDS
+
+    frames = []
+    for code in codes:
+        for attempt in range(1, WDI_RETRIES + 1):
+            try:
+                frames.append(wb.data.DataFrame(
+                    [code],
+                    time=range(year_min, year_max + 1),
+                    index=["economy", "time"],
+                    columns="series",
+                    numericTimeKeys=True,
+                    skipBlanks=True,
+                    skipAggs=True,
+                ))
+                print(f"[WDI]   {code} ({indicators[code]}): ok")
+                break
+            except Exception as exc:
+                if attempt < WDI_RETRIES:
+                    print(f"[WDI]   {code}: attempt {attempt} failed ({type(exc).__name__}), retrying...")
+                    continue
+                warnings.warn(f"[WDI] API request failed for {code}: {type(exc).__name__}: {exc}\n"
+                              f"Check your internet connection (api.worldbank.org must be reachable), "
+                              f"or that the code is a valid World Bank series code.")
+                return None
+
+    raw = pd.concat(frames, axis=1)
 
     df = raw.reset_index().rename(columns={"economy": "iso3", "time": "year"})
     df = df.rename(columns=indicators)
