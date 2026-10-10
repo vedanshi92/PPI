@@ -57,6 +57,11 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     tables["derisk_by_sponsor_type"]["pct_derisked"] = (
         100 * tables["derisk_by_sponsor_type"]["pct_derisked"]).round(1)
 
+    tables["tech_x_public_finance_counts"] = pd.crosstab(
+        df["technology_category"], df["public_finance"], margins=True, margins_name="total")
+    tables["derisk_x_public_finance"] = pd.crosstab(
+        df["derisk"], df["public_finance"], margins=True, margins_name="total")
+
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
 
@@ -66,7 +71,8 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
                                     total_investment_musd=("investment_musd", "sum"))
                                .sort_values("n_projects", ascending=False).head(20).round(1))
 
-    numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "nd_gain_value",
+    numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance",
+               "nd_gain_value",
                *CONFIG["wgi_sheet_indicators"].values(), *CONFIG["wdi_indicators"].values()]
     desc = df[numeric].apply(pd.to_numeric, errors="coerce").describe().T
     desc.insert(0, "n_missing", df[numeric].isna().sum())

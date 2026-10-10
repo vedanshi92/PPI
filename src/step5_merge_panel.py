@@ -68,6 +68,7 @@ def main():
              "n_domestic_sponsors", "n_foreign_sponsors", "n_unknown_country_sponsors",
              "foreign_sponsor_share", "sponsor_countries", "sponsor_iso3",
              "derisk", "derisk_multilateral", "derisk_bilateral",
+             "public_finance", "public_finance_multilateral", "public_finance_bilateral",
              "nd_gain_value", *CONFIG["wgi_sheet_indicators"].values(), *wdi_cols]
     merged = merged[front + [c for c in merged.columns if c not in front]]
     merged = merged.sort_values(["iso3", "year", "project_id"]).reset_index(drop=True)

@@ -8,8 +8,8 @@ Loads the raw PPI export (one row per project) and:
   3. Classifies Technology as renewable / non_renewable / mixed, DROPPING projects
      whose Technology is missing or unclassifiable
   4. Parses Sponsors Country into domestic vs. foreign sponsors by ISO3 comparison
-  5. Flags derisked projects: a guarantee, risk management or insurance product in
-     MultiLateralSupport or BiLateralSupport
+  5. Flags support types in MultiLateralSupport / BiLateralSupport: derisk (guarantee,
+     risk management, insurance) and public_finance (loan, syndication, equity)
 Writes data/interim/ppi_projects.csv. Every original PPI column is kept.
 
 Run from the project root:  python3 src/step1_prepare_ppi.py
@@ -98,7 +98,10 @@ def load_ppi_projects() -> pd.DataFrame:
 
     df = add_technology_category(df)
     df = add_sponsor_indicator(df)
-    df = add_derisk_indicator(df)
+    # derisk: guarantee, risk management or insurance from a multilateral/bilateral agency
+    df = add_support_flag(df, "derisk", CONFIG["derisk_keywords"])
+    # public_finance: loan, syndication or equity from a multilateral/bilateral agency
+    df = add_support_flag(df, "public_finance", CONFIG["public_finance_keywords"])
 
     return df.reset_index(drop=True)
 
@@ -237,34 +240,32 @@ def support_types(raw) -> list[str]:
     return [t.strip() for t in SUPPORT_TYPE_RE.findall(str(raw))]
 
 
-def add_derisk_indicator(df: pd.DataFrame) -> pd.DataFrame:
-    """derisk = 1 if any multilateral or bilateral support entry is a guarantee, risk
-    management or insurance product (CONFIG["derisk_keywords"]), else 0. Blank or "No"
-    counts as 0. Also adds derisk_multilateral and derisk_bilateral for each column."""
-    keywords = CONFIG["derisk_keywords"]
-
-    for col, name in [(CONFIG["ppi_multilateral_col"], "derisk_multilateral"),
-                      (CONFIG["ppi_bilateral_col"], "derisk_bilateral")]:
+def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.DataFrame:
+    """`name` = 1 if any multilateral or bilateral support entry has a support type
+    containing one of `keywords`, else 0. Blank or "No" counts as 0. Also adds
+    `name`_multilateral and `name`_bilateral for each column separately."""
+    parts = []
+    for col, suffix in [(CONFIG["ppi_multilateral_col"], "multilateral"),
+                        (CONFIG["ppi_bilateral_col"], "bilateral")]:
         if col not in df.columns:
             sys.exit(f"[PPI] Support column '{col}' not found.\n"
                      f"Columns found: {list(df.columns)}")
         types = df[col].apply(support_types)
-        df[name] = types.apply(
+        df[f"{name}_{suffix}"] = types.apply(
             lambda ts: int(any(kw in t.lower() for t in ts for kw in keywords)))
+        parts.append(f"{suffix} {df[f'{name}_{suffix}'].sum():,}")
 
         # A cell with support listed but no type parsed would silently count as 0
         has_support = ~df[col].fillna("").astype(str).str.strip().str.lower().isin(["", "no"])
         unparsed = has_support & (types.str.len() == 0)
         if unparsed.any():
             print(f"[PPI] WARNING: {unparsed.sum():,} '{col}' value(s) list support but no "
-                  f"support type could be read; counted as not derisked: "
+                  f"support type could be read; counted as {name} = 0: "
                   f"{df.loc[unparsed, col].unique()[:5].tolist()}")
 
-    df["derisk"] = (df["derisk_multilateral"] | df["derisk_bilateral"]).astype(int)
-
-    print(f"[PPI] Derisked projects: {df['derisk'].sum():,} of {len(df):,} "
-          f"(multilateral {df['derisk_multilateral'].sum():,}, "
-          f"bilateral {df['derisk_bilateral'].sum():,})")
+    df[name] = (df[f"{name}_multilateral"] | df[f"{name}_bilateral"]).astype(int)
+    print(f"[PPI] {name} = 1 for {df[name].sum():,} of {len(df):,} projects "
+          f"({', '.join(parts)})")
     return df
 
 

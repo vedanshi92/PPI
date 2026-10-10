@@ -56,6 +56,8 @@ CONFIG = {
     "ppi_multilateral_col": "MultiLateralSupport",
     "ppi_bilateral_col": "BiLateralSupport",
     "derisk_keywords": ["guarantee", "risk management", "insurance"],
+    # public_finance: same matching. "equity" also matches "Quasi-equity".
+    "public_finance_keywords": ["loan", "syndication", "equity"],
 
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
