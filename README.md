@@ -58,7 +58,10 @@ earlier steps have written their outputs.
 ## 4. What each step does
 
 **Step 1 — PPI projects.** Keeps every original PPI column and adds a `project_id` (row number
-in the raw export). It drops:
+in the raw export). `TotalInvestment` and `Capacity` are converted to numbers as
+`investment_musd` (USD million) and `capacity`; `Not Available` / `Not Applicable` become blank.
+Capacity units differ by project (`CapacityType`: MW, thousands of connections, km, ...), so
+`capacity_mw` keeps only the MW figures. It drops:
 - rows with no year or country
 - the placeholder `**TEST**` record
 - projects with a financial-closure year outside 1990–2025 (the export contains a few

@@ -88,7 +88,7 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
                                     total_investment_musd=("investment_musd", "sum"))
                                .sort_values("n_projects", ascending=False).head(20).round(1))
 
-    numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance", "govt_derisk",
+    numeric = ["investment_musd", "capacity_mw", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance", "govt_derisk",
                "govt_finance", "any_support",
                "nd_gain_value",
                *CONFIG["wgi_sheet_indicators"].values(), *CONFIG["wdi_indicators"].values()]

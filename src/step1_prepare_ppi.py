@@ -27,6 +27,20 @@ from common import name_to_iso3
 from config import CONFIG, PPI_CLEAN
 
 
+def to_number(values: pd.Series, label: str) -> pd.Series:
+    """Converts a PPI figure column to numbers. Placeholders such as "Not Available" and
+    blank cells become blank; thousands separators ("1,200") are removed. Any other
+    unreadable value is also blanked but printed, so it can be checked."""
+    text = values.astype("string").str.strip().str.replace(",", "", regex=False)
+    numbers = pd.to_numeric(text, errors="coerce")
+    placeholder = text.isna() | text.str.lower().isin(["", *CONFIG["missing_figure_values"]])
+    unreadable = numbers.isna() & ~placeholder
+    if unreadable.any():
+        print(f"[PPI] WARNING: {unreadable.sum():,} {label} value(s) aren't numbers and were "
+              f"left blank: {values[unreadable].value_counts().head(10).to_dict()}")
+    return numbers
+
+
 def load_ppi_projects() -> pd.DataFrame:
     path = CONFIG["ppi_file"]
     if not path.exists():
@@ -51,12 +65,18 @@ def load_ppi_projects() -> pd.DataFrame:
         CONFIG["ppi_country_col"]: "country_name",
         CONFIG["ppi_year_col"]: "year",
         CONFIG["ppi_investment_col"]: "investment_musd",
+        CONFIG["ppi_capacity_col"]: "capacity",
     })
 
     df["year"] = pd.to_numeric(df["year"], errors="coerce")
-    # Investment is kept even when unparseable (e.g. "Not Available") — we don't drop
-    # whole projects just because their investment figure is missing.
-    df["investment_musd"] = pd.to_numeric(df["investment_musd"], errors="coerce")
+    # Investment and capacity: "Not Available" etc. become blank. Projects are kept —
+    # we don't drop whole projects just because a figure is missing.
+    df["investment_musd"] = to_number(df["investment_musd"], "investment_musd")
+    df["capacity"] = to_number(df["capacity"], "capacity")
+    # Capacity is in different units by project (MW, thousands of connections, km, ...),
+    # so also keep a column with the MW figures only.
+    is_mw = df[CONFIG["ppi_capacity_type_col"]].astype(str).str.strip() == "MW"
+    df["capacity_mw"] = df["capacity"].where(is_mw)
     before = len(df)
     df = df.dropna(subset=["year", "country_name"])
     if len(df) < before:

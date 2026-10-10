@@ -33,6 +33,10 @@ CONFIG = {
     "ppi_country_col": "Country",
     "ppi_year_col": "Financial closure year",
     "ppi_investment_col": "TotalInvestment",
+    "ppi_capacity_col": "Capacity",
+    "ppi_capacity_type_col": "CapacityType",
+    # Values in TotalInvestment / Capacity that mean "no figure" (lowercased) -> blank
+    "missing_figure_values": ["not available", "not applicable", "n/a", "na"],
     "ppi_technology_col": "Technology",
     "ppi_sponsor_country_col": "Sponsors Country",
 
