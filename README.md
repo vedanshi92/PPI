@@ -87,8 +87,9 @@ so a loan from an agency like Export Finance and Insurance Corporation doesn't c
 `public_finance` is built the same way from Loan, Syndication or Equity (Equity also matches
 `Quasi-equity`), with `public_finance_multilateral` and `public_finance_bilateral`.
 `govt_derisk` = 1 if `InDirectGovtSupport` lists any support (payment, tariff, revenue, debt
-or exchange-rate guarantees, tax deductions/credits); blank, `Not Available`, `Not Applicable`,
-`No` or `N/A` is 0.
+or exchange-rate guarantees, tax deductions/credits); blank, `Not Applicable`, `No` or `N/A` is
+0. `Not Available` is left **blank**: the field is mostly unrecorded outside 2010–2019, so
+coding it 0 would mix "no support" with "not recorded".
 
 **Steps 2–4** reshape ND-GAIN, WGI (the governance *estimate*, about −2.5 to +2.5, for all
 six dimensions) and WDI into country-year tables keyed on `iso3` + `year`.

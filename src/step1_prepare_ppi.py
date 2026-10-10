@@ -273,20 +273,28 @@ def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.Dat
 
 def add_govt_derisk(df: pd.DataFrame) -> pd.DataFrame:
     """govt_derisk = 1 if InDirectGovtSupport has any entry, else 0. Blank cells and
-    placeholders such as "Not Available" or "Not Applicable" count as 0."""
+    placeholders such as "Not Applicable" count as 0. "Not Available" means the PPI
+    didn't record the field, so it is left blank (missing) instead."""
     col = CONFIG["ppi_indirect_govt_col"]
     if col not in df.columns:
         sys.exit(f"[PPI] Column '{col}' not found.\nColumns found: {list(df.columns)}")
     placeholders = set(CONFIG["no_support_values"])
+    missing = set(CONFIG["govt_support_missing_values"])
 
-    def has_entry(raw) -> int:
+    def has_entry(raw):
         if pd.isna(raw):
             return 0
         entries = [e.strip().lower() for e in str(raw).split(",")]
-        return int(any(e and e not in placeholders for e in entries))
+        if any(e and e not in placeholders | missing for e in entries):
+            return 1
+        if any(e in missing for e in entries):
+            return pd.NA
+        return 0
 
-    df["govt_derisk"] = df[col].apply(has_entry)
-    print(f"[PPI] govt_derisk = 1 for {df['govt_derisk'].sum():,} of {len(df):,} projects")
+    df["govt_derisk"] = df[col].apply(has_entry).astype("Int64")
+    print(f"[PPI] govt_derisk = 1 for {(df['govt_derisk'] == 1).sum():,}, "
+          f"0 for {(df['govt_derisk'] == 0).sum():,}, "
+          f"blank (not available) for {df['govt_derisk'].isna().sum():,} of {len(df):,} projects")
     return df
 
 

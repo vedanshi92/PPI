@@ -62,10 +62,12 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     tables["derisk_x_public_finance"] = pd.crosstab(
         df["derisk"], df["public_finance"], margins=True, margins_name="total")
 
+    # crosstab drops missing keys, so show blank govt_derisk as its own column
+    govt = df["govt_derisk"].map({0: "0", 1: "1"}).fillna("not available").rename("govt_derisk")
     tables["tech_x_govt_derisk_counts"] = pd.crosstab(
-        df["technology_category"], df["govt_derisk"], margins=True, margins_name="total")
+        df["technology_category"], govt, margins=True, margins_name="total")
     tables["derisk_x_govt_derisk"] = pd.crosstab(
-        df["derisk"], df["govt_derisk"], margins=True, margins_name="total")
+        df["derisk"], govt, margins=True, margins_name="total")
 
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
