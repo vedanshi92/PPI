@@ -332,8 +332,9 @@ def add_govt_flag(df: pd.DataFrame, col: str, name: str) -> pd.DataFrame:
 def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
     """auction_deal = 1 for a greenfield renewable project, other than large hydro, awarded
     by competitive bidding with lowest tariff, subsidy, cost or government payments as the
-    bid criterion. Such a project with no recorded bid criterion ("Not Available" or empty)
-    is left blank. Every other project, including non-greenfield ones, is 0."""
+    bid criterion. Such a project is left blank when its award method isn't recorded, or it
+    was competitively bid but its bid criterion isn't recorded ("Not Available" or empty).
+    Every other project, including non-greenfield ones, is 0."""
     for key in ["ppi_award_col", "ppi_bid_criteria_col", "ppi_type_col"]:
         if CONFIG[key] not in df.columns:
             sys.exit(f"[PPI] Column '{CONFIG[key]}' not found.\n"
@@ -347,18 +348,22 @@ def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
                    .str.contains(CONFIG["large_hydro_keyword"], regex=False))
     greenfield = norm("ppi_type_col") == CONFIG["greenfield_value"]
     competitive = norm("ppi_award_col") == CONFIG["auction_award_method"]
-    bid = norm("ppi_bid_criteria_col")
-    criteria = bid.isin(CONFIG["auction_bid_criteria"]).fillna(False)
-    criteria_missing = (bid.isna() | bid.isin(["", *CONFIG["auction_criteria_missing_values"]])
-                        ).fillna(True)
+    def not_recorded(col):
+        values = norm(col)
+        return (values.isna() | values.isin(["", *CONFIG["auction_missing_values"]])).fillna(True)
 
-    candidate = (renewable & ~large_hydro & greenfield & competitive).fillna(False)
-    df["auction_deal"] = (candidate & criteria).astype("Int64")
-    df.loc[candidate & criteria_missing, "auction_deal"] = pd.NA
+    criteria = norm("ppi_bid_criteria_col").isin(CONFIG["auction_bid_criteria"]).fillna(False)
+    eligible = (renewable & ~large_hydro & greenfield).fillna(False)
+    award_missing = eligible & not_recorded("ppi_award_col")
+    criteria_missing = eligible & competitive.fillna(False) & not_recorded("ppi_bid_criteria_col")
+
+    df["auction_deal"] = (eligible & competitive.fillna(False) & criteria).astype("Int64")
+    df.loc[award_missing | criteria_missing, "auction_deal"] = pd.NA
     print(f"[PPI] auction_deal = 1 for {(df['auction_deal'] == 1).sum():,}, "
-          f"blank (bid criteria not available) for {df['auction_deal'].isna().sum():,} "
-          f"of {len(df):,} projects (greenfield renewable excl. large hydro: "
-          f"{(renewable & ~large_hydro & greenfield).sum():,})")
+          f"0 for {(df['auction_deal'] == 0).sum():,}, blank for "
+          f"{df['auction_deal'].isna().sum():,} (award method not available "
+          f"{award_missing.sum():,}, bid criteria not available {criteria_missing.sum():,}) "
+          f"of {len(df):,} projects (greenfield renewable excl. large hydro: {eligible.sum():,})")
     return df
 
 
