@@ -11,7 +11,7 @@ Loads the raw PPI export (one row per project) and:
   5. Flags support types in MultiLateralSupport / BiLateralSupport: derisk (guarantee,
      risk management, insurance) and public_finance (loan, syndication, equity)
   6. Flags govt_derisk (any entry in InDirectGovtSupport) and govt_finance (any entry in
-     DirectGovtSupport)
+     DirectGovtSupport), and any_support if any of the four flags is 1
 Writes data/interim/ppi_projects.csv. Every original PPI column is kept.
 
 Run from the project root:  python3 src/step1_prepare_ppi.py
@@ -108,6 +108,11 @@ def load_ppi_projects() -> pd.DataFrame:
     df = add_govt_flag(df, CONFIG["ppi_indirect_govt_col"], "govt_derisk")
     # govt_finance: direct government support (revenue/capital subsidies, in-kind)
     df = add_govt_flag(df, CONFIG["ppi_direct_govt_col"], "govt_finance")
+    # any_support: any of the four support flags is 1. A blank government flag counts as
+    # "not 1", so any_support is never blank.
+    support_flags = ["derisk", "public_finance", "govt_derisk", "govt_finance"]
+    df["any_support"] = (df[support_flags] == 1).fillna(False).any(axis=1).astype(int)
+    print(f"[PPI] any_support = 1 for {df['any_support'].sum():,} of {len(df):,} projects")
 
     return df.reset_index(drop=True)
 

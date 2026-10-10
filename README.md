@@ -92,6 +92,8 @@ or exchange-rate guarantees, tax deductions/credits); blank, `Not Applicable`, `
 coding it 0 would mix "no support" with "not recorded".
 `govt_finance` is built the same way from `DirectGovtSupport` (revenue subsidy, capital subsidy,
 in-kind), with `Not Available` likewise left blank.
+`any_support` = 1 if any of `derisk`, `public_finance`, `govt_derisk` or `govt_finance` is 1,
+else 0. A blank government flag counts as not 1, so `any_support` is never blank.
 
 **Steps 2–4** reshape ND-GAIN, WGI (the governance *estimate*, about −2.5 to +2.5, for all
 six dimensions) and WDI into country-year tables keyed on `iso3` + `year`.
