@@ -75,6 +75,18 @@ CONFIG = {
     # projects outside 2010-2019 are "Not Available".
     "govt_support_missing_values": ["not available"],
 
+    # auction_deal = 1 for greenfield renewable projects (excluding large hydro) awarded by
+    # competitive bidding on lowest tariff, subsidy or cost; 0 otherwise. Exact matches,
+    # case-insensitive.
+    "ppi_award_col": "AwardMethod",
+    "ppi_bid_criteria_col": "BidCriteria",
+    "ppi_type_col": "Type of PPI",
+    "auction_award_method": "competitive bidding",
+    "auction_bid_criteria": ["lowest tariff", "lowest subsidy required",
+                             "lowest cost of construction or operation"],
+    "greenfield_value": "greenfield project",
+    "large_hydro_keyword": "hydro, large",
+
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
     # each already in long format (one row per country-year).

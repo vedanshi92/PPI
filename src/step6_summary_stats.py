@@ -79,6 +79,14 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     tables["tech_x_any_support_counts"] = pd.crosstab(
         df["technology_category"], df["any_support"], margins=True, margins_name="total")
 
+    green_re = df[(df["technology_category"] == "renewable")
+                  & (df["Type of PPI"].astype(str).str.strip() == "Greenfield project")]
+    tables["auction_deal_by_period"] = (
+        green_re.groupby(pd.cut(green_re["year"], [1989, 1999, 2009, 2014, 2019, 2025],
+                                labels=["1990-99", "2000-09", "2010-14", "2015-19", "2020-25"]),
+                         observed=False)
+        .agg(greenfield_renewable=("project_id", "size"), auction_deals=("auction_deal", "sum")))
+
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
 
@@ -89,7 +97,7 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
                                .sort_values("n_projects", ascending=False).head(20).round(1))
 
     numeric = ["investment_musd", "capacity_mw", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance", "govt_derisk",
-               "govt_finance", "any_support",
+               "govt_finance", "any_support", "auction_deal",
                "nd_gain_value",
                *CONFIG["wgi_sheet_indicators"].values(), *CONFIG["wdi_indicators"].values()]
     desc = df[numeric].apply(pd.to_numeric, errors="coerce").describe().T

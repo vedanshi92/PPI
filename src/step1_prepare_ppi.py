@@ -12,6 +12,8 @@ Loads the raw PPI export (one row per project) and:
      risk management, insurance) and public_finance (loan, syndication, equity)
   6. Flags govt_derisk (any entry in InDirectGovtSupport) and govt_finance (any entry in
      DirectGovtSupport), and any_support if any of the four flags is 1
+  7. Flags auction_deal: greenfield renewable (not large hydro) awarded by competitive
+     bidding on lowest tariff, subsidy or cost
 Writes data/interim/ppi_projects.csv. Every original PPI column is kept.
 
 Run from the project root:  python3 src/step1_prepare_ppi.py
@@ -133,6 +135,7 @@ def load_ppi_projects() -> pd.DataFrame:
     support_flags = ["derisk", "public_finance", "govt_derisk", "govt_finance"]
     df["any_support"] = (df[support_flags] == 1).fillna(False).any(axis=1).astype(int)
     print(f"[PPI] any_support = 1 for {df['any_support'].sum():,} of {len(df):,} projects")
+    df = add_auction_deal(df)
 
     return df.reset_index(drop=True)
 
@@ -323,6 +326,33 @@ def add_govt_flag(df: pd.DataFrame, col: str, name: str) -> pd.DataFrame:
     print(f"[PPI] {name} = 1 for {(df[name] == 1).sum():,}, "
           f"0 for {(df[name] == 0).sum():,}, "
           f"blank (not available) for {df[name].isna().sum():,} of {len(df):,} projects")
+    return df
+
+
+def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
+    """auction_deal = 1 for a greenfield renewable project, other than large hydro, awarded
+    by competitive bidding with lowest tariff, lowest subsidy or lowest cost as the bid
+    criterion. Every other project, including non-greenfield ones, is 0."""
+    for key in ["ppi_award_col", "ppi_bid_criteria_col", "ppi_type_col"]:
+        if CONFIG[key] not in df.columns:
+            sys.exit(f"[PPI] Column '{CONFIG[key]}' not found.\n"
+                     f"Columns found: {list(df.columns)}")
+
+    def norm(col):
+        return df[CONFIG[col]].astype("string").str.strip().str.lower()
+
+    renewable = df["technology_category"] == "renewable"
+    large_hydro = (df[CONFIG["ppi_technology_col"]].astype(str).str.lower()
+                   .str.contains(CONFIG["large_hydro_keyword"], regex=False))
+    greenfield = norm("ppi_type_col") == CONFIG["greenfield_value"]
+    competitive = norm("ppi_award_col") == CONFIG["auction_award_method"]
+    criteria = norm("ppi_bid_criteria_col").isin(CONFIG["auction_bid_criteria"])
+
+    df["auction_deal"] = (renewable & ~large_hydro & greenfield & competitive & criteria
+                          ).fillna(False).astype(int)
+    print(f"[PPI] auction_deal = 1 for {df['auction_deal'].sum():,} of {len(df):,} projects "
+          f"(greenfield renewable excl. large hydro: "
+          f"{(renewable & ~large_hydro & greenfield).sum():,})")
     return df
 
 
