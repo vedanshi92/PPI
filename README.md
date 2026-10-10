@@ -79,6 +79,12 @@ It then adds:
   project where no sponsor country is known gets `sponsor_type = unknown` and blank flags.
   Hong Kong (HKG) counts as foreign for a project in China.
 
+It also adds `derisk` = 1 if `MultiLateralSupport` or `BiLateralSupport` lists a support
+type containing Guarantee, Risk Management or Insurance (e.g. `"IFC (Guarantee / $50 Million /
+2010)"`), else 0; blank or `No` is 0. The match is on the support type, not the agency name,
+so a loan from an agency like Export Finance and Insurance Corporation doesn't count.
+`derisk_multilateral` and `derisk_bilateral` give the flag for each column separately.
+
 **Steps 2–4** reshape ND-GAIN, WGI (the governance *estimate*, about −2.5 to +2.5, for all
 six dimensions) and WDI into country-year tables keyed on `iso3` + `year`.
 

@@ -48,6 +48,15 @@ CONFIG = {
     "renewable_keywords": ["solar", "wind", "hydro", "geothermal", "biomass", "biogas", "waste"],
     "nonrenewable_keywords": ["coal", "diesel", "natural gas", "nuclear", "steam"],
 
+    # De-risking: a project is derisked if any multilateral or bilateral support entry
+    # is one of these support types. Lowercased, substring match on the support type
+    # (e.g. "Guarantee", "Risk Management (including Political Risk Insurance)"), not
+    # the agency name, so a loan from e.g. "Export Finance and Insurance Corporation"
+    # doesn't count. Blank or "No" means no support, i.e. derisk = 0.
+    "ppi_multilateral_col": "MultiLateralSupport",
+    "ppi_bilateral_col": "BiLateralSupport",
+    "derisk_keywords": ["guarantee", "risk management", "insurance"],
+
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
     # each already in long format (one row per country-year).
