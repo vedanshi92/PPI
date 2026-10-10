@@ -59,6 +59,12 @@ CONFIG = {
     # public_finance: same matching. "equity" also matches "Quasi-equity".
     "public_finance_keywords": ["loan", "syndication", "equity"],
 
+    # govt_derisk = 1 if InDirectGovtSupport lists any support (payment, tariff, revenue,
+    # debt or exchange-rate guarantees, tax deductions/credits, ...). These placeholder
+    # values, lowercased, mean no support and give 0, as does a blank cell.
+    "ppi_indirect_govt_col": "InDirectGovtSupport",
+    "no_support_values": ["no", "n/a", "na", "not available", "not applicable"],
+
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
     # each already in long format (one row per country-year).

@@ -10,6 +10,7 @@ Loads the raw PPI export (one row per project) and:
   4. Parses Sponsors Country into domestic vs. foreign sponsors by ISO3 comparison
   5. Flags support types in MultiLateralSupport / BiLateralSupport: derisk (guarantee,
      risk management, insurance) and public_finance (loan, syndication, equity)
+  6. Flags govt_derisk: any entry in InDirectGovtSupport
 Writes data/interim/ppi_projects.csv. Every original PPI column is kept.
 
 Run from the project root:  python3 src/step1_prepare_ppi.py
@@ -102,6 +103,7 @@ def load_ppi_projects() -> pd.DataFrame:
     df = add_support_flag(df, "derisk", CONFIG["derisk_keywords"])
     # public_finance: loan, syndication or equity from a multilateral/bilateral agency
     df = add_support_flag(df, "public_finance", CONFIG["public_finance_keywords"])
+    df = add_govt_derisk(df)
 
     return df.reset_index(drop=True)
 
@@ -266,6 +268,25 @@ def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.Dat
     df[name] = (df[f"{name}_multilateral"] | df[f"{name}_bilateral"]).astype(int)
     print(f"[PPI] {name} = 1 for {df[name].sum():,} of {len(df):,} projects "
           f"({', '.join(parts)})")
+    return df
+
+
+def add_govt_derisk(df: pd.DataFrame) -> pd.DataFrame:
+    """govt_derisk = 1 if InDirectGovtSupport has any entry, else 0. Blank cells and
+    placeholders such as "Not Available" or "Not Applicable" count as 0."""
+    col = CONFIG["ppi_indirect_govt_col"]
+    if col not in df.columns:
+        sys.exit(f"[PPI] Column '{col}' not found.\nColumns found: {list(df.columns)}")
+    placeholders = set(CONFIG["no_support_values"])
+
+    def has_entry(raw) -> int:
+        if pd.isna(raw):
+            return 0
+        entries = [e.strip().lower() for e in str(raw).split(",")]
+        return int(any(e and e not in placeholders for e in entries))
+
+    df["govt_derisk"] = df[col].apply(has_entry)
+    print(f"[PPI] govt_derisk = 1 for {df['govt_derisk'].sum():,} of {len(df):,} projects")
     return df
 
 

@@ -62,6 +62,11 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     tables["derisk_x_public_finance"] = pd.crosstab(
         df["derisk"], df["public_finance"], margins=True, margins_name="total")
 
+    tables["tech_x_govt_derisk_counts"] = pd.crosstab(
+        df["technology_category"], df["govt_derisk"], margins=True, margins_name="total")
+    tables["derisk_x_govt_derisk"] = pd.crosstab(
+        df["derisk"], df["govt_derisk"], margins=True, margins_name="total")
+
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
 
@@ -71,7 +76,7 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
                                     total_investment_musd=("investment_musd", "sum"))
                                .sort_values("n_projects", ascending=False).head(20).round(1))
 
-    numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance",
+    numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance", "govt_derisk",
                "nd_gain_value",
                *CONFIG["wgi_sheet_indicators"].values(), *CONFIG["wdi_indicators"].values()]
     desc = df[numeric].apply(pd.to_numeric, errors="coerce").describe().T
