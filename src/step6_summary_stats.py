@@ -62,12 +62,19 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     tables["derisk_x_public_finance"] = pd.crosstab(
         df["derisk"], df["public_finance"], margins=True, margins_name="total")
 
-    # crosstab drops missing keys, so show blank govt_derisk as its own column
-    govt = df["govt_derisk"].map({0: "0", 1: "1"}).fillna("not available").rename("govt_derisk")
+    # crosstab drops missing keys, so show a blank government flag as its own category
+    def with_blank(col):
+        return df[col].map({0: "0", 1: "1"}).fillna("not available").rename(col)
+
+    govt_derisk, govt_finance = with_blank("govt_derisk"), with_blank("govt_finance")
     tables["tech_x_govt_derisk_counts"] = pd.crosstab(
-        df["technology_category"], govt, margins=True, margins_name="total")
+        df["technology_category"], govt_derisk, margins=True, margins_name="total")
     tables["derisk_x_govt_derisk"] = pd.crosstab(
-        df["derisk"], govt, margins=True, margins_name="total")
+        df["derisk"], govt_derisk, margins=True, margins_name="total")
+    tables["tech_x_govt_finance_counts"] = pd.crosstab(
+        df["technology_category"], govt_finance, margins=True, margins_name="total")
+    tables["govt_derisk_x_govt_finance"] = pd.crosstab(
+        govt_derisk, govt_finance, margins=True, margins_name="total")
 
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
@@ -79,6 +86,7 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
                                .sort_values("n_projects", ascending=False).head(20).round(1))
 
     numeric = ["investment_musd", "n_sponsors", "foreign_sponsor_share", "derisk", "public_finance", "govt_derisk",
+               "govt_finance",
                "nd_gain_value",
                *CONFIG["wgi_sheet_indicators"].values(), *CONFIG["wdi_indicators"].values()]
     desc = df[numeric].apply(pd.to_numeric, errors="coerce").describe().T

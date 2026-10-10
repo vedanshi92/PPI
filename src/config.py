@@ -62,7 +62,10 @@ CONFIG = {
     # govt_derisk = 1 if InDirectGovtSupport lists any support (payment, tariff, revenue,
     # debt or exchange-rate guarantees, tax deductions/credits, ...). These placeholder
     # values, lowercased, mean no support and give 0, as does a blank cell.
+    # govt_finance is built the same way from DirectGovtSupport (revenue subsidy, capital
+    # subsidy, in-kind).
     "ppi_indirect_govt_col": "InDirectGovtSupport",
+    "ppi_direct_govt_col": "DirectGovtSupport",
     "no_support_values": ["no", "n/a", "na", "not applicable"],
     # ...while these mean the field wasn't recorded, so govt_derisk is left blank. Most
     # projects outside 2010-2019 are "Not Available".

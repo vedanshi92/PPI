@@ -10,7 +10,8 @@ Loads the raw PPI export (one row per project) and:
   4. Parses Sponsors Country into domestic vs. foreign sponsors by ISO3 comparison
   5. Flags support types in MultiLateralSupport / BiLateralSupport: derisk (guarantee,
      risk management, insurance) and public_finance (loan, syndication, equity)
-  6. Flags govt_derisk: any entry in InDirectGovtSupport
+  6. Flags govt_derisk (any entry in InDirectGovtSupport) and govt_finance (any entry in
+     DirectGovtSupport)
 Writes data/interim/ppi_projects.csv. Every original PPI column is kept.
 
 Run from the project root:  python3 src/step1_prepare_ppi.py
@@ -103,7 +104,10 @@ def load_ppi_projects() -> pd.DataFrame:
     df = add_support_flag(df, "derisk", CONFIG["derisk_keywords"])
     # public_finance: loan, syndication or equity from a multilateral/bilateral agency
     df = add_support_flag(df, "public_finance", CONFIG["public_finance_keywords"])
-    df = add_govt_derisk(df)
+    # govt_derisk: indirect government support (guarantees, tax deductions/credits)
+    df = add_govt_flag(df, CONFIG["ppi_indirect_govt_col"], "govt_derisk")
+    # govt_finance: direct government support (revenue/capital subsidies, in-kind)
+    df = add_govt_flag(df, CONFIG["ppi_direct_govt_col"], "govt_finance")
 
     return df.reset_index(drop=True)
 
@@ -271,11 +275,10 @@ def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.Dat
     return df
 
 
-def add_govt_derisk(df: pd.DataFrame) -> pd.DataFrame:
-    """govt_derisk = 1 if InDirectGovtSupport has any entry, else 0. Blank cells and
-    placeholders such as "Not Applicable" count as 0. "Not Available" means the PPI
+def add_govt_flag(df: pd.DataFrame, col: str, name: str) -> pd.DataFrame:
+    """`name` = 1 if government-support column `col` has any entry, else 0. Blank cells
+    and placeholders such as "Not Applicable" count as 0. "Not Available" means the PPI
     didn't record the field, so it is left blank (missing) instead."""
-    col = CONFIG["ppi_indirect_govt_col"]
     if col not in df.columns:
         sys.exit(f"[PPI] Column '{col}' not found.\nColumns found: {list(df.columns)}")
     placeholders = set(CONFIG["no_support_values"])
@@ -291,10 +294,10 @@ def add_govt_derisk(df: pd.DataFrame) -> pd.DataFrame:
             return pd.NA
         return 0
 
-    df["govt_derisk"] = df[col].apply(has_entry).astype("Int64")
-    print(f"[PPI] govt_derisk = 1 for {(df['govt_derisk'] == 1).sum():,}, "
-          f"0 for {(df['govt_derisk'] == 0).sum():,}, "
-          f"blank (not available) for {df['govt_derisk'].isna().sum():,} of {len(df):,} projects")
+    df[name] = df[col].apply(has_entry).astype("Int64")
+    print(f"[PPI] {name} = 1 for {(df[name] == 1).sum():,}, "
+          f"0 for {(df[name] == 0).sum():,}, "
+          f"blank (not available) for {df[name].isna().sum():,} of {len(df):,} projects")
     return df
 
 
