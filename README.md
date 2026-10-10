@@ -99,8 +99,9 @@ in-kind), with `Not Available` likewise left blank.
 else 0. A blank government flag counts as not 1, so `any_support` is never blank.
 `auction_deal` = 1 for a greenfield (`Type of PPI`) renewable project, other than large hydro,
 with `AwardMethod` = Competitive bidding and `BidCriteria` = Lowest tariff, Lowest subsidy
-required or Lowest cost of construction or operation; every other project, including
-brownfield and divestiture deals, is 0.
+required, Lowest cost of construction or operation, or Lowest government payments. Such a
+project whose `BidCriteria` is `Not Available` is left **blank**; every other project,
+including brownfield and divestiture deals, is 0.
 
 **Steps 2–4** reshape ND-GAIN, WGI (the governance *estimate*, about −2.5 to +2.5, for all
 six dimensions) and WDI into country-year tables keyed on `iso3` + `year`.

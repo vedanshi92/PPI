@@ -76,14 +76,17 @@ CONFIG = {
     "govt_support_missing_values": ["not available"],
 
     # auction_deal = 1 for greenfield renewable projects (excluding large hydro) awarded by
-    # competitive bidding on lowest tariff, subsidy or cost; 0 otherwise. Exact matches,
-    # case-insensitive.
+    # competitive bidding on lowest tariff, subsidy, cost or government payments; 0
+    # otherwise. Blank when such a project's BidCriteria is "Not Available" (or empty).
+    # Exact matches, case-insensitive.
     "ppi_award_col": "AwardMethod",
     "ppi_bid_criteria_col": "BidCriteria",
     "ppi_type_col": "Type of PPI",
     "auction_award_method": "competitive bidding",
     "auction_bid_criteria": ["lowest tariff", "lowest subsidy required",
-                             "lowest cost of construction or operation"],
+                             "lowest cost of construction or operation",
+                             "lowest government payments"],
+    "auction_criteria_missing_values": ["not available"],
     "greenfield_value": "greenfield project",
     "large_hydro_keyword": "hydro, large",
 

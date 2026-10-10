@@ -331,8 +331,9 @@ def add_govt_flag(df: pd.DataFrame, col: str, name: str) -> pd.DataFrame:
 
 def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
     """auction_deal = 1 for a greenfield renewable project, other than large hydro, awarded
-    by competitive bidding with lowest tariff, lowest subsidy or lowest cost as the bid
-    criterion. Every other project, including non-greenfield ones, is 0."""
+    by competitive bidding with lowest tariff, subsidy, cost or government payments as the
+    bid criterion. Such a project with no recorded bid criterion ("Not Available" or empty)
+    is left blank. Every other project, including non-greenfield ones, is 0."""
     for key in ["ppi_award_col", "ppi_bid_criteria_col", "ppi_type_col"]:
         if CONFIG[key] not in df.columns:
             sys.exit(f"[PPI] Column '{CONFIG[key]}' not found.\n"
@@ -346,12 +347,17 @@ def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
                    .str.contains(CONFIG["large_hydro_keyword"], regex=False))
     greenfield = norm("ppi_type_col") == CONFIG["greenfield_value"]
     competitive = norm("ppi_award_col") == CONFIG["auction_award_method"]
-    criteria = norm("ppi_bid_criteria_col").isin(CONFIG["auction_bid_criteria"])
+    bid = norm("ppi_bid_criteria_col")
+    criteria = bid.isin(CONFIG["auction_bid_criteria"]).fillna(False)
+    criteria_missing = (bid.isna() | bid.isin(["", *CONFIG["auction_criteria_missing_values"]])
+                        ).fillna(True)
 
-    df["auction_deal"] = (renewable & ~large_hydro & greenfield & competitive & criteria
-                          ).fillna(False).astype(int)
-    print(f"[PPI] auction_deal = 1 for {df['auction_deal'].sum():,} of {len(df):,} projects "
-          f"(greenfield renewable excl. large hydro: "
+    candidate = (renewable & ~large_hydro & greenfield & competitive).fillna(False)
+    df["auction_deal"] = (candidate & criteria).astype("Int64")
+    df.loc[candidate & criteria_missing, "auction_deal"] = pd.NA
+    print(f"[PPI] auction_deal = 1 for {(df['auction_deal'] == 1).sum():,}, "
+          f"blank (bid criteria not available) for {df['auction_deal'].isna().sum():,} "
+          f"of {len(df):,} projects (greenfield renewable excl. large hydro: "
           f"{(renewable & ~large_hydro & greenfield).sum():,})")
     return df
 

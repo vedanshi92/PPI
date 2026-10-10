@@ -85,7 +85,8 @@ def build_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         green_re.groupby(pd.cut(green_re["year"], [1989, 1999, 2009, 2014, 2019, 2025],
                                 labels=["1990-99", "2000-09", "2010-14", "2015-19", "2020-25"]),
                          observed=False)
-        .agg(greenfield_renewable=("project_id", "size"), auction_deals=("auction_deal", "sum")))
+        .agg(greenfield_renewable=("project_id", "size"), auction_deals=("auction_deal", "sum"),
+             auction_deal_blank=("auction_deal", lambda s: int(s.isna().sum()))))
 
     tables["projects_by_year"] = pd.crosstab(
         df["year"], df["technology_category"], margins=True, margins_name="total")
