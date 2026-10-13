@@ -122,9 +122,11 @@ CONFIG = {
         "FR.INR.RINR": "real_interest_rate",
         "GC.DOD.TOTL.GD.ZS": "govt_debt_pct_gdp",
         "EG.ELC.ACCS.ZS": "electricity_access_pct",
-        # Chosen over renewable energy consumption (EG.FEC.RNEW.ZS) for coverage: it runs
-        # to 2024 and covers 97.8% of projects, against 90.4% (ending 2022).
-        "EG.USE.COMM.FO.ZS": "fossil_fuel_consumption_pct",
+        # Renewable energy consumption, % of total final energy consumption. Chosen over
+        # fossil fuel energy consumption (EG.USE.COMM.FO.ZS), which has real values only to
+        # 2014-15: the API returns 0 (not missing) for every country from 2016 on. Real
+        # coverage: 90.4% of projects here vs 65.7%. This series ends in 2021-22.
+        "EG.FEC.RNEW.ZS": "renewable_energy_consumption_pct",
     },
 
     # Projects with a financial-closure year outside this window are dropped.
