@@ -63,7 +63,7 @@ def main():
 
     # Identifier and key analysis columns first, all original PPI columns after
     front = ["project_id", "iso3", "country_name", "year", "technology_category",
-             "is_renewable", "is_pure_renewable", "investment_musd", "capacity", "capacity_mw",
+             "is_renewable", "is_pure_renewable", "tech", "investment_musd", "capacity", "capacity_mw",
              "sponsor_type",
              "has_domestic_sponsor", "has_foreign_sponsor", "n_sponsors",
              "n_domestic_sponsors", "n_foreign_sponsors", "n_unknown_country_sponsors",

@@ -22,6 +22,7 @@ STEPS = [
     "step4_fetch_wdi.py",
     "step5_merge_panel.py",
     "step6_summary_stats.py",
+    "step7_twfe_stacking.py",
 ]
 
 if __name__ == "__main__":

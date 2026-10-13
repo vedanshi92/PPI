@@ -136,6 +136,7 @@ def load_ppi_projects() -> pd.DataFrame:
     df["any_support"] = (df[support_flags] == 1).fillna(False).any(axis=1).astype(int)
     print(f"[PPI] any_support = 1 for {df['any_support'].sum():,} of {len(df):,} projects")
     df = add_auction_deal(df)
+    df = add_tech(df)
 
     return df.reset_index(drop=True)
 
@@ -364,6 +365,22 @@ def add_auction_deal(df: pd.DataFrame) -> pd.DataFrame:
           f"{df['auction_deal'].isna().sum():,} (award method not available "
           f"{award_missing.sum():,}, bid criteria not available {criteria_missing.sum():,}) "
           f"of {len(df):,} projects (greenfield renewable excl. large hydro: {eligible.sum():,})")
+    return df
+
+
+def add_tech(df: pd.DataFrame) -> pd.DataFrame:
+    """tech: the main renewable technology of a renewable project (solar, wind, hydro_large,
+    hydro_small, geothermal, biomass, biogas, waste), or "hybrid" if it lists more than one.
+    Blank for non-renewable and mixed projects. Used as a fixed effect in step 7."""
+    def classify(raw):
+        t = str(raw).lower()
+        found = {name for name, kw in CONFIG["tech_keywords"].items() if kw in t}
+        return found.pop() if len(found) == 1 else ("hybrid" if found else pd.NA)
+
+    renewable = df["technology_category"] == "renewable"
+    df["tech"] = pd.Series(pd.NA, index=df.index, dtype="string")
+    df.loc[renewable, "tech"] = df.loc[renewable, CONFIG["ppi_technology_col"]].apply(classify)
+    print(f"[PPI] tech (renewable projects): {df['tech'].value_counts().to_dict()}")
     return df
 
 

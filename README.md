@@ -20,7 +20,8 @@ PPI/
 │   ├── step3_load_wgi.py       <- six WGI sheets -> one country-year panel
 │   ├── step4_fetch_wdi.py      <- WDI macro indicators from the World Bank API
 │   ├── step5_merge_panel.py    <- merge everything onto the projects
-│   └── step6_summary_stats.py  <- descriptive statistics
+│   ├── step6_summary_stats.py  <- descriptive statistics
+│   └── step7_twfe_stacking.py  <- TWFE policy-stacking regression
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -121,6 +122,12 @@ Output: `data/processed/project_panel.csv`.
 table) and `summary_stats.txt`. The tables cover projects and investment by technology and
 sponsor type, technology × sponsor crosstabs, projects by year, top countries, and
 descriptives with missingness for every merged variable.
+
+**Step 7** runs a project-level two-way fixed effects model of policy stacking on renewable
+projects: `public_finance ~ derisk | iso3^year + tech`, with SEs clustered by country
+(pyfixest). `tech` is the project's main renewable technology (solar, wind, hydro_large,
+hydro_small, geothermal, biomass, biogas, waste, or hybrid). Output:
+`data/processed/twfe_policy_stacking.txt`.
 
 ## 5. Country matching
 

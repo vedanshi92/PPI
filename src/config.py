@@ -25,6 +25,7 @@ WDI_PANEL = INTERIM / "wdi_panel.csv"
 PROJECT_PANEL = OUT / "project_panel.csv"
 SUMMARY_XLSX = OUT / "summary_stats.xlsx"
 SUMMARY_TXT = OUT / "summary_stats.txt"
+STACKING_TXT = OUT / "twfe_policy_stacking.txt"
 
 CONFIG = {
     # --- PPI database ---
@@ -90,6 +91,14 @@ CONFIG = {
     "auction_missing_values": ["not available"],
     "greenfield_value": "greenfield project",
     "large_hydro_keyword": "hydro, large",
+
+    # tech: main renewable technology of a renewable project, matched on Technology
+    # (lowercased substring). A project matching more than one is "hybrid".
+    "tech_keywords": {
+        "solar": "solar", "wind": "wind", "hydro_large": "hydro, large",
+        "hydro_small": "hydro, small", "geothermal": "geothermal", "biomass": "biomass",
+        "biogas": "biogas", "waste": "waste",
+    },
 
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
