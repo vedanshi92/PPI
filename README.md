@@ -45,6 +45,11 @@ be reached, the pipeline still finishes. It reuses the WDI data saved by the las
 run, or else leaves the WDI columns blank and warns you. To change which indicators are
 pulled, edit `CONFIG["wdi_indicators"]` in `src/config.py`.
 
+The WDI series include `renewable_energy_consumption_pct` (`EG.FEC.RNEW.ZS`, renewable energy as
+% of total final energy consumption), which ends in 2021 for most countries. The fossil fuel
+share (`EG.USE.COMM.FO.ZS`) was not used: the API returns 0 for every country from 2016 on,
+so it only has real values to 2014–15.
+
 ## 3. Run
 
 ```bash
