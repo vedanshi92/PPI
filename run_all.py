@@ -23,6 +23,7 @@ STEPS = [
     "step5_merge_panel.py",
     "step6_summary_stats.py",
     "step7_twfe_stacking.py",
+    "step8_figures.py",
 ]
 
 if __name__ == "__main__":

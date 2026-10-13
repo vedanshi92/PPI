@@ -21,7 +21,8 @@ PPI/
 │   ├── step4_fetch_wdi.py      <- WDI macro indicators from the World Bank API
 │   ├── step5_merge_panel.py    <- merge everything onto the projects
 │   ├── step6_summary_stats.py  <- descriptive statistics
-│   └── step7_twfe_stacking.py  <- fixed effects regressions
+│   ├── step7_twfe_stacking.py  <- fixed effects regressions
+│   └── step8_figures.py        <- summary figures
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -132,6 +133,12 @@ support; (4) `derisk` on having a foreign sponsor; (5) `derisk` on award method 
 vary only by country-year, so (a) absorbs them. `tech` is the project's main renewable
 technology (solar, wind, hydro_large, hydro_small, geothermal, biomass, biogas, waste, or
 hybrid). Output: `data/processed/twfe_policy_stacking.txt`.
+
+**Step 8** draws project-level summary figures for renewable projects into
+`data/processed/figures/`: support by IDA status, by sponsor nationality and by technology;
+multilateral vs bilateral support over time; policy stacking (raw conditional shares);
+investment and capacity by type of support; and trends in public finance, derisking and foreign
+sponsorship. `figure_data.xlsx` holds the numbers behind every figure.
 
 ## 5. Country matching
 
