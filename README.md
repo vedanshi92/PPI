@@ -21,7 +21,7 @@ PPI/
 │   ├── step4_fetch_wdi.py      <- WDI macro indicators from the World Bank API
 │   ├── step5_merge_panel.py    <- merge everything onto the projects
 │   ├── step6_summary_stats.py  <- descriptive statistics
-│   └── step7_twfe_stacking.py  <- TWFE policy-stacking regression
+│   └── step7_twfe_stacking.py  <- fixed effects regressions
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -123,11 +123,15 @@ table) and `summary_stats.txt`. The tables cover projects and investment by tech
 sponsor type, technology × sponsor crosstabs, projects by year, top countries, and
 descriptives with missingness for every merged variable.
 
-**Step 7** runs a project-level two-way fixed effects model of policy stacking on renewable
-projects: `public_finance ~ derisk | iso3^year + tech`, with SEs clustered by country
-(pyfixest). `tech` is the project's main renewable technology (solar, wind, hydro_large,
-hydro_small, geothermal, biomass, biogas, waste, or hybrid). Output:
-`data/processed/twfe_policy_stacking.txt`.
+**Step 7** runs project-level fixed effects models (linear probability, SEs clustered by
+country, pyfixest) on renewable projects: (1) `public_finance ~ derisk`; (2) the same with
+bilateral support only; (3) multilateral support (any derisk or public finance) on bilateral
+support; (4) `derisk` on having a foreign sponsor; (5) `derisk` on award method dummies
+(reference: competitive bidding). Each is run with (a) `iso3^year + tech` fixed effects and
+(b) `iso3 + year + tech` fixed effects plus ND-GAIN and GDP growth as controls. The controls
+vary only by country-year, so (a) absorbs them. `tech` is the project's main renewable
+technology (solar, wind, hydro_large, hydro_small, geothermal, biomass, biogas, waste, or
+hybrid). Output: `data/processed/twfe_policy_stacking.txt`.
 
 ## 5. Country matching
 
