@@ -24,6 +24,7 @@ STEPS = [
     "step6_summary_stats.py",
     "step7_twfe_stacking.py",
     "step8_figures.py",
+    "step9_country_year_panel.py",
 ]
 
 if __name__ == "__main__":

@@ -4,8 +4,7 @@ Builds a **project-country-year panel**: one row per World Bank PPI energy proje
 with its country (ISO3) and financial-closure year, with country-year data from **ND-GAIN**,
 the **Worldwide Governance Indicators (WGI)** and **World Bank WDI** merged on.
 
-A later Stage 2 script (not yet built) will collapse `project_panel.csv` to one row per
-country-year for the econometric analysis.
+Step 9 then collapses it to a **balanced country-year panel** (`country_year_panel.csv`).
 
 ## 1. Folder structure
 
@@ -22,7 +21,8 @@ PPI/
 │   ├── step5_merge_panel.py    <- merge everything onto the projects
 │   ├── step6_summary_stats.py  <- descriptive statistics
 │   ├── step7_twfe_stacking.py  <- fixed effects regressions
-│   └── step8_figures.py        <- summary figures
+│   ├── step8_figures.py        <- summary figures
+│   └── step9_country_year_panel.py <- balanced country-year panel
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -139,6 +139,15 @@ hybrid). Output: `data/processed/twfe_policy_stacking.txt`.
 multilateral vs bilateral support over time; policy stacking (raw conditional shares);
 investment and capacity by type of support; and trends in public finance, derisking and foreign
 sponsorship. `figure_data.xlsx` holds the numbers behind every figure.
+
+**Step 9** collapses the project panel to a balanced country-year panel,
+`data/processed/country_year_panel.csv`: every country with at least one PPI energy project
+(117) for every year 1990–2024, i.e. 4,095 rows. Each row has project counts (all, renewable,
+non-renewable, mixed), total investment and capacity (all and renewable), and counts of
+projects with each support flag (all and renewable). Country-years with no project are 0, and
+projects with unreported investment count as 0 in the totals (`n_investment_missing` counts
+them). ND-GAIN, WGI and WDI are merged for every country-year, so they are only missing where
+the source has no value (ND-GAIN before 1995; WGI before 1996 and in 1997, 1999, 2001).
 
 ## 5. Country matching
 

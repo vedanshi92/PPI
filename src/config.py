@@ -26,6 +26,7 @@ PROJECT_PANEL = OUT / "project_panel.csv"
 SUMMARY_XLSX = OUT / "summary_stats.xlsx"
 SUMMARY_TXT = OUT / "summary_stats.txt"
 STACKING_TXT = OUT / "twfe_policy_stacking.txt"
+COUNTRY_YEAR_PANEL = OUT / "country_year_panel.csv"
 
 CONFIG = {
     # --- PPI database ---
