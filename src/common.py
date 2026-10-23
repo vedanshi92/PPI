@@ -36,6 +36,8 @@ except ImportError:
 # Codes follow the World Bank convention (e.g. Kosovo = XKX), which is what WGI and
 # WDI use. Add to this as your merge diagnostics reveal more mismatches.
 MANUAL_ISO3_FIXES = {
+    "macedonia, north": "MKD",
+    "sychelles": "SYC",  # misspelt in the REN21 sheet
     "korea, rep.": "KOR",
     "south korea": "KOR",
     "korea, dem. people's rep.": "PRK",

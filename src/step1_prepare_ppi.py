@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 from common import name_to_iso3
-from config import CONFIG, PPI_CLEAN
+from config import CONFIG, ENERGY_DEALS, PPI_CLEAN
 
 
 def to_number(values: pd.Series, label: str) -> pd.Series:
@@ -119,6 +119,13 @@ def load_ppi_projects() -> pd.DataFrame:
     if len(unmatched):
         print(f"[PPI] WARNING: {df['iso3'].isna().sum():,} rows have a country name with no "
               f"ISO3 code: {list(unmatched)} — add them to common.MANUAL_ISO3_FIXES.")
+
+    # All energy deals, before projects with no classifiable technology are dropped (e.g.
+    # transmission, distribution, gas). Step 9 uses them for entry_year and first_any_derisk.
+    all_deals = add_support_flag(df.copy(), "derisk", CONFIG["derisk_keywords"], quiet=True)
+    all_deals[["project_id", "iso3", "country_name", "year", "derisk"]].to_csv(
+        ENERGY_DEALS, index=False)
+    print(f"[PPI] Wrote {len(all_deals):,} energy deals (all technologies) to {ENERGY_DEALS}")
 
     df = add_technology_category(df)
     df = add_sponsor_indicator(df)
@@ -275,7 +282,8 @@ def support_types(raw) -> list[str]:
     return [t.strip() for t in SUPPORT_TYPE_RE.findall(str(raw))]
 
 
-def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.DataFrame:
+def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str],
+                     quiet: bool = False) -> pd.DataFrame:
     """`name` = 1 if any multilateral or bilateral support entry has a support type
     containing one of `keywords`, else 0. Blank or "No" counts as 0. Also adds
     `name`_multilateral and `name`_bilateral for each column separately."""
@@ -299,8 +307,9 @@ def add_support_flag(df: pd.DataFrame, name: str, keywords: list[str]) -> pd.Dat
                   f"{df.loc[unparsed, col].unique()[:5].tolist()}")
 
     df[name] = (df[f"{name}_multilateral"] | df[f"{name}_bilateral"]).astype(int)
-    print(f"[PPI] {name} = 1 for {df[name].sum():,} of {len(df):,} projects "
-          f"({', '.join(parts)})")
+    if not quiet:
+        print(f"[PPI] {name} = 1 for {df[name].sum():,} of {len(df):,} projects "
+              f"({', '.join(parts)})")
     return df
 
 

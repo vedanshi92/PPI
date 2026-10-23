@@ -16,7 +16,9 @@ import sys
 
 import pandas as pd
 
-from config import CONFIG, COUNTRY_YEAR_PANEL, ND_GAIN_PANEL, PROJECT_PANEL, WDI_PANEL, WGI_PANEL
+from common import name_to_iso3
+from config import (CONFIG, COUNTRY_YEAR_PANEL, ENERGY_DEALS, ND_GAIN_PANEL, PROJECT_PANEL,
+                    WDI_PANEL, WGI_PANEL)
 
 # Project flags summed into counts, for all projects and for renewable projects only
 FLAGS = ["derisk", "public_finance", "govt_derisk", "govt_finance", "any_support"]
@@ -31,7 +33,7 @@ def collapse(p: pd.DataFrame) -> pd.DataFrame:
 
     cols = {
         "n_projects": p["project_id"].notna().astype(int),
-        "n_renewable": renewable.astype(int),
+        "n_ren": renewable.astype(int),
         "n_non_renewable": (p["technology_category"] == "non_renewable").astype(int),
         "n_mixed": (p["technology_category"] == "mixed").astype(int),
         "investment_musd": p["investment_filled"],
@@ -51,6 +53,86 @@ def collapse(p: pd.DataFrame) -> pd.DataFrame:
 
     sums = pd.DataFrame(cols).assign(iso3=p["iso3"], year=p["year"])
     return sums.groupby(["iso3", "year"], as_index=False).sum()
+
+
+def first_year(panel: pd.DataFrame, mask: pd.Series) -> pd.Series:
+    """For each row, the first year in which `mask` holds for that country (blank if never)."""
+    first = panel.loc[mask].groupby("iso3")["year"].min()
+    return panel["iso3"].map(first).astype("Int64")
+
+
+def add_renewable_deal_vars(panel: pd.DataFrame) -> pd.DataFrame:
+    """n_ren_nd: renewable deals without derisking. first_ren_derisk: 1 if any renewable
+    deal that year was derisked."""
+    panel["n_ren_nd"] = panel["n_ren"] - panel["n_derisk_renewable"]
+    panel["first_ren_derisk"] = (panel["n_derisk_renewable"] > 0).astype(int)
+    return panel
+
+
+def add_country_dates(panel: pd.DataFrame) -> pd.DataFrame:
+    """Fixed country dates (the same in every year of a country):
+      treat_year       first year with a derisked renewable deal
+      entry_year       first year with any energy PPI deal
+      first_any_derisk first year with a derisked deal in any energy technology
+      auction_year     first year with an auction-proxy deal (auction_deal = 1)
+    entry_year and first_any_derisk use ALL energy deals from 1990, including those step 1
+    drops for having no classifiable technology (e.g. transmission, distribution, gas)."""
+    panel["treat_year"] = first_year(panel, panel["n_derisk_renewable"] > 0)
+    deals = pd.read_csv(ENERGY_DEALS)
+    deals = deals[deals["year"] >= panel["year"].min()]
+    panel["entry_year"] = panel["iso3"].map(deals.groupby("iso3")["year"].min()).astype("Int64")
+    panel["first_any_derisk"] = panel["iso3"].map(
+        deals[deals["derisk"] == 1].groupby("iso3")["year"].min()).astype("Int64")
+    panel["auction_year"] = first_year(panel, panel["n_auction_deal"] > 0)
+    return panel
+
+
+def load_ren21() -> pd.DataFrame:
+    """REN21 policies as one row per country and policy (fit / nm), earliest year enacted."""
+    ren = pd.read_excel(CONFIG["ren21_file"], sheet_name=CONFIG["ren21_sheet"], header=2)
+    ren = ren.dropna(subset=["Country", "Policy Type"])
+    ren["iso3"] = ren["Country"].apply(name_to_iso3)
+    unmatched = ren.loc[ren["iso3"].isna(), "Country"].unique()
+    if len(unmatched):
+        print(f"[PANEL] WARNING: REN21 countries with no ISO3 (left out): {list(unmatched)}")
+    ren["policy"] = ren["Policy Type"].str.strip().str.lower().map(CONFIG["ren21_policy_map"])
+    ren["enacted"] = pd.to_numeric(ren["Year Enacted"], errors="coerce")
+    return (ren.dropna(subset=["iso3", "policy", "enacted"])
+            .groupby(["iso3", "policy"], as_index=False)["enacted"].min())
+
+
+def add_policies(panel: pd.DataFrame) -> pd.DataFrame:
+    """Policy controls measured at t-1:
+      auction_active       an auction-proxy deal by t-1 (auction_year <= t-1)
+      fit_active, nm_active REN21 feed-in tariff / net metering enacted by t-1 and not removed
+      prior_energy_derisk  first_any_derisk before the current year"""
+    prev = panel["year"] - 1
+    panel["auction_active"] = (panel["auction_year"] <= prev).fillna(False).astype(int)
+    ren = load_ren21()
+    for policy in ["fit", "nm"]:
+        enacted = panel["iso3"].map(ren[ren["policy"] == policy].set_index("iso3")["enacted"])
+        removed = pd.Series([CONFIG["ren21_removed"].get((iso, policy)) for iso in panel["iso3"]],
+                            index=panel.index, dtype="float")
+        panel[f"{policy}_active"] = ((enacted <= prev) & ~(removed <= prev)).astype(int)
+    panel["prior_energy_derisk"] = (panel["first_any_derisk"] < panel["year"]).fillna(False
+                                                                                  ).astype(int)
+    print(f"[PANEL] REN21: {ren['iso3'].nunique()} countries with a FiT or net metering policy, "
+          f"{ren['iso3'].isin(panel['iso3']).groupby(ren['iso3']).first().sum()} of them in "
+          f"the panel.")
+    return panel
+
+
+def add_deal_history(panel: pd.DataFrame) -> pd.DataFrame:
+    """Renewable deal flow in the previous three years (t-1..t-3) and the three before that
+    (t-4..t-6). Blank where the window reaches back before the panel's first year."""
+    by_country = panel.groupby("iso3")["n_ren"]
+    lags = {k: by_country.shift(k) for k in range(1, 7)}
+    panel["deals_l1_3"] = lags[1] + lags[2] + lags[3]
+    panel["deals_l4_6"] = lags[4] + lags[5] + lags[6]
+    panel["deals_growth"] = panel["deals_l1_3"] - panel["deals_l4_6"]
+    for col in ["deals_l1_3", "deals_l4_6", "deals_growth"]:
+        panel[col] = panel[col].astype("Int64")
+    return panel
 
 
 def main():
@@ -78,13 +160,20 @@ def main():
     # Country-year covariates for every cell, not only those with projects
     sources = [pd.read_csv(ND_GAIN_PANEL), pd.read_csv(WGI_PANEL)]
     if WDI_PANEL.exists():
-        sources.append(pd.read_csv(WDI_PANEL))
+        wdi = pd.read_csv(WDI_PANEL)
+        wdi_cols = [c for c in CONFIG["wdi_indicators"].values() if c in wdi.columns]
+        sources.append(wdi[["iso3", "year", *wdi_cols]])
     for source in sources:
         panel = panel.merge(source, on=["iso3", "year"], how="left", validate="1:1")
 
+    panel = panel.sort_values(["iso3", "year"]).reset_index(drop=True)
+    panel = add_renewable_deal_vars(panel)
+    panel = add_country_dates(panel)
+    panel = add_policies(panel)
+    panel = add_deal_history(panel)
+
     assert len(panel) == len(countries) * len(years), "panel is not balanced"
     assert panel["n_projects"].sum() == len(projects), "projects lost in the collapse"
-    panel = panel.sort_values(["iso3", "year"]).reset_index(drop=True)
     panel.to_csv(COUNTRY_YEAR_PANEL, index=False)
 
     covariates = ["nd_gain_value", *CONFIG["wgi_sheet_indicators"].values(),

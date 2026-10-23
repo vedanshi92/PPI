@@ -49,6 +49,8 @@ def main():
     wdi_cols = list(CONFIG["wdi_indicators"].values())
     if WDI_PANEL.exists():
         wdi = read_country_year(WDI_PANEL, "WDI")
+        # Only the series in CONFIG, in case the saved file has ones since removed
+        wdi = wdi[["iso3", "year", *[c for c in wdi_cols if c in wdi.columns]]]
     else:
         warnings.warn("[WDI] No WDI data available (step 4 couldn't reach the API) — "
                       "WDI columns will be blank for every project.")
