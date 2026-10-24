@@ -242,16 +242,22 @@ def main():
         sys.exit(f"{PROJECT_PANEL} not found — run step5_merge_panel.py first.")
     projects = pd.read_csv(PROJECT_PANEL, low_memory=False)
 
-    countries = (projects.groupby("iso3")["country_name"].first().reset_index())
+    # Region and income group are fixed per country in the PPI export
+    projects["Region"] = projects["Region"].astype(str).str.replace("\xa0", " ").str.strip()
+    countries = (projects.groupby("iso3")
+                 .agg(country_name=("country_name", "first"), region=("Region", "first"),
+                      income_group=("IncomeGroup", "first"))
+                 .reset_index())
     years = range(int(projects["year"].min()), int(projects["year"].max()) + 1)
     grid = countries.merge(pd.DataFrame({"year": list(years)}), how="cross")
 
     panel = grid.merge(collapse(projects), on=["iso3", "year"], how="left")
-    count_cols = [c for c in panel.columns if c not in ("iso3", "country_name", "year")]
+    count_cols = [c for c in panel.columns
+                  if c not in ("iso3", "country_name", "region", "income_group", "year")]
     panel[count_cols] = panel[count_cols].fillna(0)
     int_cols = [c for c in count_cols if c.startswith("n_")]
     panel[int_cols] = panel[int_cols].astype(int)
-    panel.insert(3, "has_project", (panel["n_projects"] > 0).astype(int))
+    panel.insert(5, "has_project", (panel["n_projects"] > 0).astype(int))
     panel["renewable_investment_share"] = (
         panel["investment_renewable_musd"] / panel["investment_musd"]).where(
         panel["investment_musd"] > 0)

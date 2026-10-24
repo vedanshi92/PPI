@@ -22,7 +22,8 @@ PPI/
 │   ├── step6_summary_stats.py  <- descriptive statistics
 │   ├── step7_twfe_stacking.py  <- fixed effects regressions
 │   ├── step8_figures.py        <- summary figures
-│   └── step9_country_year_panel.py <- balanced country-year panel
+│   ├── step9_country_year_panel.py <- balanced country-year panel
+│   └── step10_hazard.py        <- hazard model of first de-risking
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -169,6 +170,16 @@ Step 9 also builds:
   (`first_any_derisk` < t);
 - deal-flow history: `deals_l1_3` (renewable deals in t−1..t−3), `deals_l4_6` (t−4..t−6),
   `deals_growth` (the difference). Blank where the window reaches before 1990.
+
+**Step 10** estimates a discrete-time hazard model of a country's first de-risked renewable
+deal ("de-risking follows the market"). Risk set: country-years from max(`entry_year`, 1993)
+to `treat_year` (never-treated countries stay to 2024); `event` = 1 in `treat_year`.
+Regressors: log(1 + `deals_l1_3`), `deals_growth`, `prior_energy_derisk`, `fit_active`,
+`nm_active`, `auction_active`. Specifications: LPM with year FE; + region and income-group FE;
+region × year FE; logit average marginal effects with year FE and with year + region + income
+FE. SEs clustered by country. Rows with a missing regressor are dropped (`deals_growth` starts
+in 1996). Output: `data/processed/hazard_model.txt`. `region` and `income_group` (fixed per
+country in the PPI export) are in the country-year panel.
 
 ## 5. Country matching
 
