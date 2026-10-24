@@ -23,7 +23,8 @@ PPI/
 │   ├── step7_twfe_stacking.py  <- fixed effects regressions
 │   ├── step8_figures.py        <- summary figures
 │   ├── step9_country_year_panel.py <- balanced country-year panel
-│   └── step10_hazard.py        <- hazard model of first de-risking
+│   ├── step10_hazard.py        <- hazard model of first de-risking
+│   └── step11_local_projections.py <- local projections: which leads
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -180,6 +181,13 @@ region × year FE; logit average marginal effects with year FE and with year + r
 FE. SEs clustered by country. Rows with a missing regressor are dropped (`deals_growth` starts
 in 1996). Output: `data/processed/hazard_model.txt`. `region` and `income_group` (fixed per
 country in the PPI export) are in the country-year panel.
+
+**Step 11** runs local projections on the balanced zero-filled country-year panel to see
+which leads. `ldeals` = log(1 + `n_ren_nd`), `derisk` = `ren_derisk`. For h = 0–5 it
+estimates `derisk`(t+h) on `ldeals`(t) and `ldeals`(t+h) on `derisk`(t), each with two lags of
+both, country and year FE, SEs clustered by country. Coefficients are standardised by
+SD(shock) / SD(outcome). Output: `data/processed/local_projections.txt` and
+`figures/8_local_projections.png`.
 
 ## 5. Country matching
 
