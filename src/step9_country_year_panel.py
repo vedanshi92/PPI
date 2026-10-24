@@ -18,7 +18,7 @@ import sys
 import pandas as pd
 
 from common import name_to_iso3
-from config import (CONFIG, COUNTRY_YEAR_PANEL, ENERGY_DEALS, FIT_POLICIES, ND_GAIN_PANEL,
+from config import (CONFIG, COUNTRY_YEAR_PANEL, ENERGY_DEALS, FIT_POLICIES, NM_POLICIES, ND_GAIN_PANEL,
                     PROJECT_PANEL, WDI_PANEL, WGI_PANEL)
 
 # Project flags summed into counts, for all projects and for renewable projects only
@@ -124,7 +124,8 @@ def parse_removal(value):
     removed = year_in(value)
     if removed is None:
         return None, None, "unknown_removal"
-    reintro = re.search(r"(?:reintro|reinstat)\w*\D*(\d+)?", str(value), re.I)
+    # "rei\w*tro" also catches the "reitroduced" typo in RT5
+    reintro = re.search(r"(?:rei\w*tro|reinstat)\w*\D*(\d+)?", str(value), re.I)
     if reintro:
         year = reintro.group(1)
         if year and len(year) == 4:
@@ -133,13 +134,21 @@ def parse_removal(value):
     return removed, None, "dated"
 
 
-def load_rt5_fit(fallback: pd.DataFrame) -> pd.DataFrame:
-    """Feed-in tariff dates per country from REN21 GSR 2023 table RT5: year adopted, year
-    removed, year reintroduced. Only national rows are kept (state/city rows don't match a
-    country name exactly). Where RT5 has no usable adoption year, the GSR 2025 Figure 9 year
-    (`fallback`) is used. Writes the parsed table to data/interim for checking."""
+# RT5 column positions: (year adopted, year removed) for each policy
+RT5_COLUMNS = {"fit": (3, 4), "nm": (9, 10)}
+RT5_LABELS = {"fit": "feed-in tariff", "nm": "net metering/billing"}
+
+
+def load_rt5(policy: str, fallback: pd.DataFrame) -> pd.DataFrame:
+    """Policy dates per country from REN21 GSR 2023 table RT5 ("fit": feed-in tariff /
+    premium; "nm": net metering / billing): year adopted, year removed, year reintroduced.
+    Only national rows are kept (state/city rows don't match a country name exactly). Where
+    RT5 has no usable adoption year, the GSR 2025 Figure 9 year (`fallback`) is used; where
+    RT5 lists the policy with an unknown adoption year and there is no fallback, the status
+    is "unknown_adoption". Writes the parsed table to data/interim for checking."""
+    adopted_col, removed_col = RT5_COLUMNS[policy]
     rt5 = pd.read_excel(CONFIG["ren21_rt5_file"], sheet_name=CONFIG["ren21_rt5_sheet"],
-                        header=3).iloc[:, [1, 2, 3, 4]]
+                        header=3).iloc[:, [1, 2, adopted_col, removed_col]]
     rt5.columns = ["region", "country", "adopted_raw", "removed_raw"]
     rt5 = rt5[rt5["region"].notna() & rt5["country"].notna()].copy()
     rt5["country"] = (rt5["country"].astype(str).str.strip()
@@ -152,28 +161,37 @@ def load_rt5_fit(fallback: pd.DataFrame) -> pd.DataFrame:
     rt5[["removed", "reintroduced", "status"]] = pd.DataFrame(
         rt5["removed_raw"].apply(parse_removal).tolist(), index=rt5.index)
     rt5["source"] = "RT5"
-    fit = rt5.set_index("iso3")[["country", "adopted_raw", "removed_raw", "adopted", "removed",
-                                 "reintroduced", "status", "source"]]
+    dates = rt5.set_index("iso3")[["country", "adopted_raw", "removed_raw", "adopted",
+                                   "removed", "reintroduced", "status", "source"]]
 
-    fb = fallback[fallback["policy"] == "fit"].set_index("iso3")["enacted"]
-    use_fb = [iso for iso in fb.index if iso not in fit.index or pd.isna(fit.at[iso, "adopted"])]
+    fb = fallback[fallback["policy"] == policy].set_index("iso3")["enacted"]
+    use_fb = [iso for iso in fb.index
+              if iso not in dates.index or pd.isna(dates.at[iso, "adopted"])]
     for iso in use_fb:
-        if iso not in fit.index:
-            fit.loc[iso, ["country", "status"]] = [iso, "none"]
-        fit.loc[iso, ["adopted", "source"]] = [fb[iso], "GSR 2025 Figure 9"]
-    fit = fit[fit["adopted"].notna() | (fit["status"] != "none")]
-    fit.reset_index().to_csv(FIT_POLICIES, index=False)
-    print(f"[PANEL] RT5 FiT: {(fit['source'] == 'RT5').sum()} countries; adoption year from "
-          f"GSR 2025 Figure 9 for {len(use_fb)}; {len(skipped)} sub-national/unmatched rows "
-          f"skipped. Parsed dates: {FIT_POLICIES}")
-    return fit
+        if iso not in dates.index:
+            dates.loc[iso, ["country", "status"]] = [iso, "none"]
+        dates.loc[iso, ["adopted", "source"]] = [fb[iso], "GSR 2025 Figure 9"]
+    unknown = dates["adopted"].isna() & dates["adopted_raw"].notna()
+    dates.loc[unknown, "status"] = "unknown_adoption"
+    dates = dates[dates["adopted"].notna() | (dates["status"] != "none")]
+    dates.insert(0, "policy", policy)
+    out = FIT_POLICIES if policy == "fit" else NM_POLICIES
+    dates.reset_index().to_csv(out, index=False)
+    print(f"[PANEL] RT5 {RT5_LABELS[policy]}: {(dates['source'] == 'RT5').sum()} countries; "
+          f"adoption year from GSR 2025 Figure 9 for {len(use_fb)}; unknown adoption year for "
+          f"{int(unknown.sum())}; {len(skipped)} sub-national rows skipped. Parsed: {out}")
+    return dates
 
 
-def fit_status(fit: pd.DataFrame, iso3: str, prev: int):
-    """1 if the FiT was in force in year `prev` (= t-1), 0 if not, blank if unknown."""
-    if iso3 not in fit.index or pd.isna(fit.at[iso3, "adopted"]) or prev < fit.at[iso3, "adopted"]:
+def policy_status(dates: pd.DataFrame, iso3: str, prev: int):
+    """1 if the policy was in force in year `prev` (= t-1), 0 if not, blank if unknown."""
+    if iso3 not in dates.index:
         return 0
-    row = fit.loc[iso3]
+    row = dates.loc[iso3]
+    if row["status"] == "unknown_adoption":
+        return pd.NA
+    if pd.isna(row["adopted"]) or prev < row["adopted"]:
+        return 0
     if row["status"] == "unknown_removal":
         return pd.NA
     if pd.isna(row["removed"]) or prev < row["removed"]:
@@ -186,18 +204,18 @@ def fit_status(fit: pd.DataFrame, iso3: str, prev: int):
 def add_policies(panel: pd.DataFrame) -> pd.DataFrame:
     """Policy controls measured at t-1:
       auction_active       an auction-proxy deal by t-1 (auction_year <= t-1)
-      fit_active           feed-in tariff in force in t-1 (REN21 RT5 adoption/removal years;
-                           blank where it was removed or reintroduced in an unknown year)
-      nm_active            net metering or net billing enacted by t-1 (GSR 2025 Figure 9)
-      prior_energy_derisk  first_any_derisk before the current year"""
+      fit_active           feed-in tariff in force in t-1
+      nm_active            net metering or net billing in force in t-1
+      prior_energy_derisk  first_any_derisk before the current year
+    fit_active and nm_active use REN21 RT5 years adopted / removed / reintroduced, and are
+    blank where RT5 gives no year for an adoption, removal or reintroduction."""
     prev = panel["year"] - 1
     panel["auction_active"] = (panel["auction_year"] <= prev).fillna(False).astype(int)
-    ren = load_ren21()
-    fit = load_rt5_fit(ren)
-    panel["fit_active"] = pd.array(
-        [fit_status(fit, iso, p) for iso, p in zip(panel["iso3"], prev)], dtype="Int64")
-    nm_enacted = panel["iso3"].map(ren[ren["policy"] == "nm"].set_index("iso3")["enacted"])
-    panel["nm_active"] = (nm_enacted <= prev).astype(int)
+    fig9 = load_ren21()
+    for policy in ["fit", "nm"]:
+        dates = load_rt5(policy, fig9)
+        panel[f"{policy}_active"] = pd.array(
+            [policy_status(dates, iso, p) for iso, p in zip(panel["iso3"], prev)], dtype="Int64")
     panel["prior_energy_derisk"] = (panel["first_any_derisk"] < panel["year"]).fillna(False
                                                                                   ).astype(int)
     return panel

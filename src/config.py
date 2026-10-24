@@ -19,6 +19,7 @@ for _d in (INTERIM, OUT):
 PPI_CLEAN = INTERIM / "ppi_projects.csv"
 ENERGY_DEALS = INTERIM / "ppi_energy_deals_all.csv"  # all technologies, for entry dates
 FIT_POLICIES = INTERIM / "ren21_fit_policies.csv"  # parsed RT5 FiT dates, for checking
+NM_POLICIES = INTERIM / "ren21_nm_policies.csv"  # parsed RT5 net metering/billing dates
 ND_GAIN_PANEL = INTERIM / "nd_gain_panel.csv"
 WGI_PANEL = INTERIM / "wgi_panel.csv"
 WDI_PANEL = INTERIM / "wdi_panel.csv"
@@ -104,13 +105,14 @@ CONFIG = {
     },
 
     # --- REN21 renewable policies ---
-    # nm_active: GSR 2025 Global Overview Figure 9, "References" sheet — one row per country
-    # and policy with the year enacted (net billing counts as net metering).
+    # GSR 2025 Global Overview Figure 9, "References" sheet — one row per country and policy
+    # with the year enacted (net billing counts as net metering). Used only as a fallback
+    # adoption year where RT5 has none.
     "ren21_file": RAW / "ren21" / "GSR_2025_GO_Figure_9.xlsx",
     "ren21_sheet": "References",
     "ren21_policy_map": {"feed-in tariff": "fit", "net-metering": "nm", "net-billing": "nm"},
-    # fit_active: GSR 2023 Supply Data Pack, table RT5 — FiT year adopted and year removed
-    # (and reintroductions). Where RT5 has no usable adoption year, the Figure 9 year is used.
+    # fit_active / nm_active: GSR 2023 Supply Data Pack, table RT5 — year adopted and year
+    # removed (and reintroductions) for feed-in tariffs and for net metering/billing.
     "ren21_rt5_file": RAW / "ren21" / "GSR2023_Supply-Data-Pack.xlsx",
     "ren21_rt5_sheet": "RT5",
 
