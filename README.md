@@ -39,7 +39,8 @@ Place each file in `data/raw/` with the filename below (rename after downloading
 |---|---|---|
 | World Bank PPI database | https://ppi.worldbankgroup.org/en/ppi -> custom query, Excel export | `data/raw/ppi.xlsx` |
 | ND-GAIN Country Index | https://gain.nd.edu/our-work/country-index/download-data/ (the `gain.csv` country time series) | `data/raw/nd_gain.csv` |
-| REN21 feed-in tariff / net metering policies | REN21 Global Status Report 2025, Global Overview Figure 9 (Excel, "References" sheet) | `data/raw/ren21/GSR_2025_GO_Figure_9.xlsx` |
+| REN21 net metering / billing policies | REN21 Global Status Report 2025, Global Overview Figure 9 (Excel, "References" sheet) | `data/raw/ren21/GSR_2025_GO_Figure_9.xlsx` |
+| REN21 feed-in tariff policies | REN21 GSR 2023 Supply Data Pack, table RT5 | `data/raw/ren21/GSR2023_Supply-Data-Pack.xlsx` |
 | Worldwide Governance Indicators | https://www.worldbank.org/en/publication/worldwide-governance-indicators (the full Excel dataset, one sheet per dimension) | `data/raw/wgidata.xlsx` |
 
 WDI indicators are **not** downloaded by hand: step 4 fetches them from the World Bank API
@@ -152,17 +153,19 @@ the source has no value (ND-GAIN before 1995; WGI before 1996 and in 1997, 1999,
 
 Step 9 also builds:
 - per country-year: `n_ren` (renewable deals), `n_ren_nd` (renewable deals without derisking),
-  `first_ren_derisk` (1 if any renewable deal that year was derisked);
+  `ren_derisk` (1 if any renewable deal that year was derisked);
 - fixed country dates (same in every year): `treat_year` (first derisked renewable deal),
   `entry_year` (first energy PPI deal), `first_any_derisk` (first derisked deal in any energy
   technology), `auction_year` (first `auction_deal`); blank if never. `entry_year` and
   `first_any_derisk` count all energy deals from 1990, including those step 1 drops for having
   no classifiable technology (transmission, distribution, gas);
-- policy controls at t−1: `auction_active` (`auction_year` ≤ t−1), `fit_active` and `nm_active`
-  (REN21 feed-in tariff / net metering enacted by t−1 and not removed; net billing counts as net
-  metering), `prior_energy_derisk` (`first_any_derisk` < t). The REN21 sheet lists policies in
-  force in 2024 and gives no removal years, so policies abolished earlier are not captured; add
-  known removal years to `CONFIG["ren21_removed"]`;
+- policy controls at t−1: `auction_active` (`auction_year` ≤ t−1); `fit_active` (feed-in
+  tariff in force in t−1, from REN21 RT5's year adopted / year removed / year reintroduced;
+  blank where RT5 says it was removed or reintroduced but gives no year: Costa Rica, Iraq,
+  Jordan, Mauritius, Namibia; adoption year from GSR 2025 Figure 9 where RT5 has none: Nepal,
+  Ukraine; parsed dates in `data/interim/ren21_fit_policies.csv`); `nm_active` (net metering
+  or net billing enacted by t−1, GSR 2025 Figure 9); `prior_energy_derisk`
+  (`first_any_derisk` < t);
 - deal-flow history: `deals_l1_3` (renewable deals in t−1..t−3), `deals_l4_6` (t−4..t−6),
   `deals_growth` (the difference). Blank where the window reaches before 1990.
 

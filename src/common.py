@@ -38,6 +38,9 @@ except ImportError:
 MANUAL_ISO3_FIXES = {
     "macedonia, north": "MKD",
     "sychelles": "SYC",  # misspelt in the REN21 sheet
+    "republic of korea": "KOR",  # fuzzy search gives North Korea
+    "chinese taipei": "TWN",
+    "state of palestine": "PSE",
     "korea, rep.": "KOR",
     "south korea": "KOR",
     "korea, dem. people's rep.": "PRK",
@@ -90,11 +93,12 @@ MANUAL_ISO3_FIXES = {
 
 
 @lru_cache(maxsize=None)
-def name_to_iso3(name: str) -> str | None:
+def name_to_iso3(name: str, fuzzy: bool = True) -> str | None:
     """Country name -> ISO3. Tries, in order: the manual dictionary, an EXACT
     pycountry lookup (name / official name / code), and only then pycountry's fuzzy
     search. Fuzzy matches are printed so they can be checked by eye, since fuzzy
-    search is what produced errors like Niger -> Nigeria."""
+    search is what produced errors like Niger -> Nigeria. fuzzy=False skips it, for lists
+    that mix countries with states or cities that must NOT be matched to a country."""
     if not isinstance(name, str) or not name.strip():
         return None
     name = name.strip()
@@ -107,6 +111,8 @@ def name_to_iso3(name: str) -> str | None:
         return pycountry.countries.lookup(name).alpha_3
     except LookupError:
         pass
+    if not fuzzy:
+        return None
     try:
         match = pycountry.countries.search_fuzzy(name)
         if match:

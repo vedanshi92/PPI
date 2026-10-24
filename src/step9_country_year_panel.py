@@ -12,13 +12,14 @@ Writes data/processed/country_year_panel.csv.
 Run from the project root:  python3 src/step9_country_year_panel.py
 """
 
+import re
 import sys
 
 import pandas as pd
 
 from common import name_to_iso3
-from config import (CONFIG, COUNTRY_YEAR_PANEL, ENERGY_DEALS, ND_GAIN_PANEL, PROJECT_PANEL,
-                    WDI_PANEL, WGI_PANEL)
+from config import (CONFIG, COUNTRY_YEAR_PANEL, ENERGY_DEALS, FIT_POLICIES, ND_GAIN_PANEL,
+                    PROJECT_PANEL, WDI_PANEL, WGI_PANEL)
 
 # Project flags summed into counts, for all projects and for renewable projects only
 FLAGS = ["derisk", "public_finance", "govt_derisk", "govt_finance", "any_support"]
@@ -62,10 +63,10 @@ def first_year(panel: pd.DataFrame, mask: pd.Series) -> pd.Series:
 
 
 def add_renewable_deal_vars(panel: pd.DataFrame) -> pd.DataFrame:
-    """n_ren_nd: renewable deals without derisking. first_ren_derisk: 1 if any renewable
+    """n_ren_nd: renewable deals without derisking. ren_derisk: 1 if any renewable
     deal that year was derisked."""
     panel["n_ren_nd"] = panel["n_ren"] - panel["n_derisk_renewable"]
-    panel["first_ren_derisk"] = (panel["n_derisk_renewable"] > 0).astype(int)
+    panel["ren_derisk"] = (panel["n_derisk_renewable"] > 0).astype(int)
     return panel
 
 
@@ -101,24 +102,104 @@ def load_ren21() -> pd.DataFrame:
             .groupby(["iso3", "policy"], as_index=False)["enacted"].min())
 
 
+YEAR = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)")
+
+
+def year_in(value):
+    """First four-digit year in a cell ("2005-2006" -> 2005, "Unknown Year" -> None)."""
+    if pd.isna(value):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    match = YEAR.search(str(value))
+    return int(match.group(1)) if match else None
+
+
+def parse_removal(value):
+    """RT5 "Year Removed" -> (removed, reintroduced, status). status is "none", "dated",
+    "unknown_removal" (removed, year unknown) or "unknown_reintro" (reintroduced, year
+    unknown), e.g. "2015 (reintroduced in 2020)" -> (2015, 2020, "dated")."""
+    if pd.isna(value):
+        return None, None, "none"
+    removed = year_in(value)
+    if removed is None:
+        return None, None, "unknown_removal"
+    reintro = re.search(r"(?:reintro|reinstat)\w*\D*(\d+)?", str(value), re.I)
+    if reintro:
+        year = reintro.group(1)
+        if year and len(year) == 4:
+            return removed, int(year), "dated"
+        return removed, None, "unknown_reintro"
+    return removed, None, "dated"
+
+
+def load_rt5_fit(fallback: pd.DataFrame) -> pd.DataFrame:
+    """Feed-in tariff dates per country from REN21 GSR 2023 table RT5: year adopted, year
+    removed, year reintroduced. Only national rows are kept (state/city rows don't match a
+    country name exactly). Where RT5 has no usable adoption year, the GSR 2025 Figure 9 year
+    (`fallback`) is used. Writes the parsed table to data/interim for checking."""
+    rt5 = pd.read_excel(CONFIG["ren21_rt5_file"], sheet_name=CONFIG["ren21_rt5_sheet"],
+                        header=3).iloc[:, [1, 2, 3, 4]]
+    rt5.columns = ["region", "country", "adopted_raw", "removed_raw"]
+    rt5 = rt5[rt5["region"].notna() & rt5["country"].notna()].copy()
+    rt5["country"] = (rt5["country"].astype(str).str.strip()
+                      .str.replace(r"[\d,]+$", "", regex=True).str.strip())
+    rt5["iso3"] = rt5["country"].apply(lambda n: name_to_iso3(n, fuzzy=False))
+    skipped = sorted(rt5.loc[rt5["iso3"].isna(), "country"].unique())
+    rt5 = rt5.dropna(subset=["iso3"]).drop_duplicates("iso3")
+
+    rt5["adopted"] = rt5["adopted_raw"].apply(year_in)
+    rt5[["removed", "reintroduced", "status"]] = pd.DataFrame(
+        rt5["removed_raw"].apply(parse_removal).tolist(), index=rt5.index)
+    rt5["source"] = "RT5"
+    fit = rt5.set_index("iso3")[["country", "adopted_raw", "removed_raw", "adopted", "removed",
+                                 "reintroduced", "status", "source"]]
+
+    fb = fallback[fallback["policy"] == "fit"].set_index("iso3")["enacted"]
+    use_fb = [iso for iso in fb.index if iso not in fit.index or pd.isna(fit.at[iso, "adopted"])]
+    for iso in use_fb:
+        if iso not in fit.index:
+            fit.loc[iso, ["country", "status"]] = [iso, "none"]
+        fit.loc[iso, ["adopted", "source"]] = [fb[iso], "GSR 2025 Figure 9"]
+    fit = fit[fit["adopted"].notna() | (fit["status"] != "none")]
+    fit.reset_index().to_csv(FIT_POLICIES, index=False)
+    print(f"[PANEL] RT5 FiT: {(fit['source'] == 'RT5').sum()} countries; adoption year from "
+          f"GSR 2025 Figure 9 for {len(use_fb)}; {len(skipped)} sub-national/unmatched rows "
+          f"skipped. Parsed dates: {FIT_POLICIES}")
+    return fit
+
+
+def fit_status(fit: pd.DataFrame, iso3: str, prev: int):
+    """1 if the FiT was in force in year `prev` (= t-1), 0 if not, blank if unknown."""
+    if iso3 not in fit.index or pd.isna(fit.at[iso3, "adopted"]) or prev < fit.at[iso3, "adopted"]:
+        return 0
+    row = fit.loc[iso3]
+    if row["status"] == "unknown_removal":
+        return pd.NA
+    if pd.isna(row["removed"]) or prev < row["removed"]:
+        return 1
+    if pd.notna(row["reintroduced"]):
+        return int(prev >= row["reintroduced"])
+    return pd.NA if row["status"] == "unknown_reintro" else 0
+
+
 def add_policies(panel: pd.DataFrame) -> pd.DataFrame:
     """Policy controls measured at t-1:
       auction_active       an auction-proxy deal by t-1 (auction_year <= t-1)
-      fit_active, nm_active REN21 feed-in tariff / net metering enacted by t-1 and not removed
+      fit_active           feed-in tariff in force in t-1 (REN21 RT5 adoption/removal years;
+                           blank where it was removed or reintroduced in an unknown year)
+      nm_active            net metering or net billing enacted by t-1 (GSR 2025 Figure 9)
       prior_energy_derisk  first_any_derisk before the current year"""
     prev = panel["year"] - 1
     panel["auction_active"] = (panel["auction_year"] <= prev).fillna(False).astype(int)
     ren = load_ren21()
-    for policy in ["fit", "nm"]:
-        enacted = panel["iso3"].map(ren[ren["policy"] == policy].set_index("iso3")["enacted"])
-        removed = pd.Series([CONFIG["ren21_removed"].get((iso, policy)) for iso in panel["iso3"]],
-                            index=panel.index, dtype="float")
-        panel[f"{policy}_active"] = ((enacted <= prev) & ~(removed <= prev)).astype(int)
+    fit = load_rt5_fit(ren)
+    panel["fit_active"] = pd.array(
+        [fit_status(fit, iso, p) for iso, p in zip(panel["iso3"], prev)], dtype="Int64")
+    nm_enacted = panel["iso3"].map(ren[ren["policy"] == "nm"].set_index("iso3")["enacted"])
+    panel["nm_active"] = (nm_enacted <= prev).astype(int)
     panel["prior_energy_derisk"] = (panel["first_any_derisk"] < panel["year"]).fillna(False
                                                                                   ).astype(int)
-    print(f"[PANEL] REN21: {ren['iso3'].nunique()} countries with a FiT or net metering policy, "
-          f"{ren['iso3'].isin(panel['iso3']).groupby(ren['iso3']).first().sum()} of them in "
-          f"the panel.")
     return panel
 
 

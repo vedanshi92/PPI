@@ -18,6 +18,7 @@ for _d in (INTERIM, OUT):
 # Intermediate files written by each step
 PPI_CLEAN = INTERIM / "ppi_projects.csv"
 ENERGY_DEALS = INTERIM / "ppi_energy_deals_all.csv"  # all technologies, for entry dates
+FIT_POLICIES = INTERIM / "ren21_fit_policies.csv"  # parsed RT5 FiT dates, for checking
 ND_GAIN_PANEL = INTERIM / "nd_gain_panel.csv"
 WGI_PANEL = INTERIM / "wgi_panel.csv"
 WDI_PANEL = INTERIM / "wdi_panel.csv"
@@ -102,16 +103,16 @@ CONFIG = {
         "biogas": "biogas", "waste": "waste",
     },
 
-    # --- REN21 renewable policies (GSR 2025, Global Overview Figure 9, References sheet) ---
-    # One row per country and policy with the year enacted. fit_active / nm_active in the
-    # country-year panel are 1 if the policy was enacted by t-1 and not removed by then.
-    # Net billing counts as net metering (it is its successor where countries switched).
+    # --- REN21 renewable policies ---
+    # nm_active: GSR 2025 Global Overview Figure 9, "References" sheet — one row per country
+    # and policy with the year enacted (net billing counts as net metering).
     "ren21_file": RAW / "ren21" / "GSR_2025_GO_Figure_9.xlsx",
     "ren21_sheet": "References",
     "ren21_policy_map": {"feed-in tariff": "fit", "net-metering": "nm", "net-billing": "nm"},
-    # The sheet gives no removal years. Add {(iso3, "fit" or "nm"): year removed} here if
-    # known; a policy counts as active up to and including the year before removal.
-    "ren21_removed": {},
+    # fit_active: GSR 2023 Supply Data Pack, table RT5 — FiT year adopted and year removed
+    # (and reintroductions). Where RT5 has no usable adoption year, the Figure 9 year is used.
+    "ren21_rt5_file": RAW / "ren21" / "GSR2023_Supply-Data-Pack.xlsx",
+    "ren21_rt5_sheet": "RT5",
 
     # --- World Governance Indicators (WGI) ---
     # The official multi-sheet WGI Excel export: one sheet per governance dimension,
