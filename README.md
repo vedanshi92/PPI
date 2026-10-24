@@ -24,7 +24,8 @@ PPI/
 │   ├── step8_figures.py        <- summary figures
 │   ├── step9_country_year_panel.py <- balanced country-year panel
 │   ├── step10_hazard.py        <- hazard model of first de-risking
-│   └── step11_local_projections.py <- local projections: which leads
+│   ├── step11_local_projections.py <- local projections: which leads
+│   └── step12_stacked_did.py   <- shape-matched stacked DiD
 ├── data/                       <- not committed to git
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -188,6 +189,18 @@ estimates `derisk`(t+h) on `ldeals`(t) and `ldeals`(t+h) on `derisk`(t), each wi
 both, country and year FE, SEs clustered by country. Coefficients are standardised by
 SD(shock) / SD(outcome). Output: `data/processed/local_projections.txt` and
 `figures/8_local_projections.png`.
+
+**Step 12** runs a shape-matched stacked DiD: does the first de-risked renewable deal
+accelerate deals without de-risking (`n_ren_nd`)? Events are treated countries with
+T−5 ≥ 1991 and T+5 ≤ 2024. Each gets the 3 nearest controls (not treated by T+5, in PPI by
+T−1), matched on the demeaned path of log(1 + `n_ren`) over T−5..T−1, with a +1 penalty for a
+different region and, if the treated country had pre-period deals, only controls that also had
+some. Blocks T−5..T+5 are stacked and a Poisson event study (reference rel = −1; unit FE,
+event × year FE; clustered by country) and a pooled treated × post model are estimated, with a
+joint pre-trend test and Rambachan–Roth relative-magnitudes bounds (confidence sets from
+simulating the coefficients — more conservative than the R HonestDiD package's conditional
+intervals). Output: `data/processed/stacked_did.txt`, `data/interim/stacked_did_matches.csv`,
+`figures/9_stacked_did.png`.
 
 ## 5. Country matching
 

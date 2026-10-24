@@ -32,6 +32,7 @@ STACKING_TXT = OUT / "twfe_policy_stacking.txt"
 COUNTRY_YEAR_PANEL = OUT / "country_year_panel.csv"
 HAZARD_TXT = OUT / "hazard_model.txt"
 LP_TXT = OUT / "local_projections.txt"
+STACKED_DID_TXT = OUT / "stacked_did.txt"
 
 CONFIG = {
     # --- PPI database ---
