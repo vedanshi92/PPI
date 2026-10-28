@@ -6,3 +6,5 @@ wbgapi==1.0.12
 pyfixest==0.60.0
 matplotlib==3.11.2
 statsmodels==0.15.0
+geopandas==0.14.4
+pyogrio

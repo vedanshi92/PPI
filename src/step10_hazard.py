@@ -65,6 +65,10 @@ X = ["log_deals_l1_3", "deals_growth", "prior_energy_derisk", "fit_active", "nm_
 CONTROLS = ["vulnerability_l1", "reg_quality_l1", "log_gdppc_l1", "real_interest_l1",
             "depreciation_l1"]
 CONTROLS_NO_RIR = [c for c in CONTROLS if c != "real_interest_l1"]
+# Further lagged controls used by the paper figures (step 13); not in the models above
+EXTRA_CONTROLS = {"inflation_l1": "inflation_cpi", "gdp_growth_l1": "gdp_growth",
+                  "private_credit_l1": "private_credit_pct_gdp",
+                  "electricity_l1": "electricity_access_pct"}
 WINSOR = (0.01, 0.99)  # depreciation is winsorised at these panel quantiles
 
 
@@ -78,7 +82,9 @@ def add_lagged_controls(panel: pd.DataFrame) -> pd.DataFrame:
       real_interest_l1  real interest rate (%)
       depreciation_l1   change in log local-currency units per USD from t-2 to t-1
                         (positive = depreciation), winsorised at the 1st/99th percentiles
-                        because currency redenominations create extreme jumps"""
+                        because currency redenominations create extreme jumps
+    plus EXTRA_CONTROLS at t-1 (inflation, also winsorised; GDP growth; private credit;
+    electricity access) for the paper figures."""
     p = panel.sort_values(["iso3", "year"]).copy()
     g = p.groupby("iso3")
     rq = g["regulatory_quality"].transform(lambda s: s.interpolate(limit_area="inside"))
@@ -92,7 +98,15 @@ def add_lagged_controls(panel: pd.DataFrame) -> pd.DataFrame:
         "real_interest_l1": p["real_interest_rate"],
         "depreciation_l1": depreciation,
     })
-    for col in CONTROLS:
+    # Inflation is winsorised like depreciation (hyperinflation episodes reach >2,000%)
+    for col, source in EXTRA_CONTROLS.items():
+        if source not in p.columns:
+            continue
+        values = p[source]
+        if col == "inflation_l1":
+            values = values.clip(*values.quantile(list(WINSOR)))
+        current[col] = values
+    for col in current.columns:
         p[col] = current[col].groupby(p["iso3"]).shift(1)
     return p
 

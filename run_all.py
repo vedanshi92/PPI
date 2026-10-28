@@ -28,6 +28,7 @@ STEPS = [
     "step10_hazard.py",
     "step11_local_projections.py",
     "step12_stacked_did.py",
+    "step13_paper_figures.py",
 ]
 
 if __name__ == "__main__":

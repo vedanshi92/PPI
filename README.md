@@ -25,7 +25,8 @@ PPI/
 │   ├── step9_country_year_panel.py <- balanced country-year panel
 │   ├── step10_hazard.py        <- hazard model of first de-risking
 │   ├── step11_local_projections.py <- local projections: which leads
-│   └── step12_stacked_did.py   <- shape-matched stacked DiD
+│   ├── step12_stacked_did.py   <- shape-matched stacked DiD
+│   └── step13_paper_figures.py <- paper figures
 ├── data/                       <- committed: raw inputs, interim files and outputs
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
@@ -213,6 +214,18 @@ some. Blocks T−5..T+5 are stacked and a Poisson event study (reference rel = �
 event × year FE; clustered by country) and a pooled treated × post model are estimated, with a
 joint pre-trend test. Output: `data/processed/stacked_did.txt`,
 `data/interim/stacked_did_matches.csv`, `figures/9_stacked_did.png`.
+
+**Step 13** draws the paper figures into `data/processed/figures/paper/` (data behind them in
+`paper_figure_data.xlsx`). Main text: (1) renewable deals and de-risked deals per year, with
+the de-risked share; (2) dumbbell of each treated country's first renewable deal and first
+de-risked renewable deal, with a histogram of the gap; (3) predicted annual hazard against
+deals in t−1..t−3 from the LPM, logit and cloglog, other variables at their means, with the
+data distribution underneath; (4) the deal-flow coefficient across specifications; (5) the
+local projections in both directions on one standardised y-axis. Appendix: standardised
+coefficients of country conditions; landmark Kaplan–Meier curves by early deal flow; year and
+years-since-entry effects; a world map of the first de-risking year (Natural Earth shapes
+bundled with geopandas 0.14.4); and the project-level stacking coefficient under three
+fixed-effect sets.
 
 ## 5. Country matching
 

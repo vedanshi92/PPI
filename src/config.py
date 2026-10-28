@@ -151,6 +151,7 @@ CONFIG = {
         "BX.KLT.DINV.WD.GD.ZS": "fdi_net_inflows_pct_gdp",
         "FR.INR.RINR": "real_interest_rate",
         "EG.ELC.ACCS.ZS": "electricity_access_pct",
+        "FS.AST.PRVT.GD.ZS": "private_credit_pct_gdp",
         # Renewable energy consumption, % of total final energy consumption. Chosen over
         # fossil fuel energy consumption (EG.USE.COMM.FO.ZS), which has real values only to
         # 2014-15: the API returns 0 (not missing) for every country from 2016 on. Real
