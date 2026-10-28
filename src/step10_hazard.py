@@ -26,7 +26,8 @@ Specifications (SEs clustered by country):
   (10) as (9) plus duration dummies
   (11) Cox proportional hazards, Efron ties, on the same multiple-record data: analysis
        time = years since entry, (start, stop] records, delayed entry for countries that
-       entered before 1993; covariates X + region + income dummies
+       entered before 1993; covariates X + region + income dummies; SEs from a
+       country-cluster bootstrap
 
 Rows with a missing regressor are dropped (deals_growth needs t-1..t-6, so it starts in
 1996; fit_active / nm_active are blank where REN21 gives no date).
@@ -43,14 +44,17 @@ import numpy as np
 import pandas as pd
 import pyfixest as pf
 import statsmodels.api as sm
+from scipy import stats
 
 from config import COUNTRY_YEAR_PANEL, HAZARD_TXT
 
 START_YEAR = 1993
 # Years since entry: 0-2 (reference), 3-5, 6-10, 11+
 DURATION_BINS = [-1, 2, 5, 10, np.inf]
-DURATION_LABELS = ["0-2", "3-5", "6-10", "11+"]
+DURATION_LABELS = ["0_2", "3_5", "6_10", "11plus"]  # formula-safe names
 DUR_TERMS = [f"dur_{lab}" for lab in DURATION_LABELS[1:]]
+COX_BOOT = 500   # country-cluster bootstrap replications for the Cox SEs
+COX_SEED = 2024
 X = ["log_deals_l1_3", "deals_growth", "prior_energy_derisk", "fit_active", "nm_active",
      "auction_active"]
 
@@ -102,7 +106,7 @@ def logit_ame(data: pd.DataFrame, fe: list[str], duration: bool = False):
 
 
 def rename_dur(name: str) -> str:
-    """dur_bin dummy names from get_dummies ("dur_bin_3-5") -> "dur_3-5"."""
+    """dur_bin dummy names from get_dummies ("dur_bin_3_5") -> "dur_3_5"."""
     return name.replace("dur_bin_", "dur_")
 
 
@@ -128,23 +132,48 @@ def cox_fit(data: pd.DataFrame):
     """Cox proportional hazards with Efron ties on the multiple-record (counting-process)
     data: each country-year is a (start, stop] interval in years since entry, with delayed
     entry for countries already in the market before 1993. Covariates X + region and income
-    dummies; robust SEs clustered by country."""
+    dummies. SEs are clustered by country with a cluster bootstrap (resampling countries):
+    statsmodels' robust covariance uses score residuals that ignore delayed entry (they
+    don't sum to zero here), so it can't be used."""
     d = data.dropna(subset=["event", *X]).copy()
     d["start"] = d["years_since_entry"]
     d["stop"] = d["start"] + 1
     dummies = pd.get_dummies(d[["region", "income_group"]].astype(str), drop_first=True,
                              dtype=float)
     exog = pd.concat([d[X], dummies], axis=1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        fit = sm.PHReg(d["stop"], exog, status=d["event"], entry=d["start"],
-                       ties="efron").fit(groups=pd.factorize(d["iso3"])[0])
-    names = list(exog.columns)
-    params = pd.Series(fit.params, index=names)
-    bse = pd.Series(fit.bse, index=names)
-    pvals = pd.Series(fit.pvalues, index=names)
-    out = pd.DataFrame({"Estimate": params[X], "Std. Error": bse[X], "p": pvals[X],
-                        "2.5%": params[X] - 1.96 * bse[X], "97.5%": params[X] + 1.96 * bse[X]})
+
+    def fit_params(rows: pd.Index) -> np.ndarray:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return sm.PHReg(d.loc[rows, "stop"], exog.loc[rows], status=d.loc[rows, "event"],
+                            entry=d.loc[rows, "start"], ties="efron").fit().params
+
+    params = pd.Series(fit_params(d.index), index=exog.columns)
+    rng = np.random.default_rng(COX_SEED)
+    rows_by_country = {c: idx for c, idx in d.groupby("iso3").groups.items()}
+    countries = np.array(list(rows_by_country))
+    draws = []
+    for _ in range(COX_BOOT):
+        sample = rng.choice(countries, size=len(countries), replace=True)
+        rows = np.concatenate([rows_by_country[c] for c in sample])
+        boot = d.loc[rows].reset_index(drop=True)
+        if boot["event"].sum() == 0:
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                b = sm.PHReg(boot["stop"], exog.loc[rows].reset_index(drop=True),
+                             status=boot["event"], entry=boot["start"],
+                             ties="efron").fit().params
+            except (np.linalg.LinAlgError, ValueError):
+                continue
+        if np.all(np.isfinite(b)):
+            draws.append(b)
+    draws = pd.DataFrame(draws, columns=exog.columns)
+    bse = draws[X].std()
+    out = pd.DataFrame({"Estimate": params[X], "Std. Error": bse,
+                        "p": 2 * stats.norm.sf(np.abs(params[X] / bse)),
+                        "2.5%": draws[X].quantile(0.025), "97.5%": draws[X].quantile(0.975)})
     out["hazard ratio"] = np.exp(out["Estimate"])
     return out, len(d), int(d["event"].sum())
 
@@ -237,7 +266,8 @@ def main():
               "effects;", "cloglog and Cox: coefficients = log hazard ratios (hazard ratios in "
               "the full output).", "Duration dummies: years since entry, reference 0-2. "
               "* p<0.1, ** p<0.05, *** p<0.01.", "Logit and cloglog drop FE cells with no "
-              "event; Cox uses time since entry as the baseline, so no year FE.", ""]
+              "event; Cox uses time since entry as the baseline, so no year FE; its SEs and "
+              f"CI come from a {COX_BOOT}-replication country-cluster bootstrap.", ""]
     with pd.option_context("display.width", 300, "display.max_columns", 20,
                            "display.max_colwidth", 30):
         lines.append(table.T.to_string())

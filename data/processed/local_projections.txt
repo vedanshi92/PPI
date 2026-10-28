@@ -1,0 +1,25 @@
+Local projections, balanced zero-filled country-year panel
+ldeals = log(1 + n_ren_nd); derisk = ren_derisk (any de-risked renewable deal in t).
+Controls: 2 lags of ldeals and derisk; country and year FE; SEs clustered by country.
+Standardised coefficient = coef x SD(shock) / SD(outcome); full-panel SDs: SD(ldeals) = 0.583, SD(derisk) = 0.151.
+Means: ldeals = 0.217, derisk = 0.023.
+
+Market -> de-risking: derisk(t+h) on ldeals(t)
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.0369  0.0170  0.0320    0.1429  0.0125  0.2732  3861
+1  0.0379  0.0097  0.0002    0.1468  0.0725  0.2210  3744
+2  0.0307  0.0109  0.0056    0.1189  0.0355  0.2023  3627
+3  0.0052  0.0121  0.6670    0.0202 -0.0725  0.1128  3510
+4  0.0029  0.0110  0.7917    0.0113 -0.0729  0.0954  3393
+5 -0.0122  0.0109  0.2627   -0.0474 -0.1307  0.0360  3276
+
+De-risking -> market: ldeals(t+h) on derisk(t)
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.2390  0.1074  0.0281    0.0617  0.0068  0.1167  3861
+1  0.2374  0.0760  0.0023    0.0613  0.0224  0.1002  3744
+2  0.2145  0.0780  0.0069    0.0554  0.0155  0.0953  3627
+3  0.1809  0.0897  0.0460    0.0467  0.0008  0.0926  3510
+4 -0.1244  0.0675  0.0678   -0.0321 -0.0667  0.0024  3393
+5  0.0481  0.0815  0.5563    0.0124 -0.0293  0.0541  3276

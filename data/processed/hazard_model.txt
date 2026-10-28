@@ -1,0 +1,159 @@
+Discrete-time hazard: first de-risked renewable deal (event = 1 in treat_year)
+Risk set: country-years from max(entry_year, 1993) to treat_year (or 2024 if never treated). SEs clustered by country.
+
+Risk set: 2,279 country-years, 117 countries, 50 events (first de-risked renewable deal).
+With all regressors: 2,105 country-years, 112 countries, 45 events.
+Dropped for a missing regressor: deals_growth 93, fit_active 52, nm_active 29
+
+Means in the estimation sample (event = 1 vs 0):
+event                    0      1
+log_deals_l1_3       0.393  0.924
+deals_growth         0.232  2.556
+prior_energy_derisk  0.300  0.422
+fit_active           0.176  0.333
+nm_active            0.115  0.111
+auction_active       0.079  0.133
+
+Events and country-years by years since entry (estimation sample):
+         country_years  events
+dur_bin                       
+0_2                238       6
+3_5                280       9
+6_10               443       3
+11plus            1144      27
+
+Estimates, SE in parentheses. LPM: coefficients; logit: average marginal effects;
+cloglog and Cox: coefficients = log hazard ratios (hazard ratios in the full output).
+Duration dummies: years since entry, reference 0-2. * p<0.1, ** p<0.05, *** p<0.01.
+Logit and cloglog drop FE cells with no event; Cox uses time since entry as the baseline, so no year FE; its SEs and CI come from a 500-replication country-cluster bootstrap.
+
+                                                         log_deals_l1_3      deals_growth prior_energy_derisk       fit_active            nm_active    auction_active          dur_3_5          dur_6_10        dur_11plus      N events
+(1) LPM, year FE                                      0.0202** (0.0078)   0.0009 (0.0007)     0.0071 (0.0070)  0.0089 (0.0109)  -0.0410*** (0.0148)  -0.0251 (0.0225)                                                       2,105     45
+(2) LPM, year + region + income FE                   0.0243*** (0.0081)   0.0007 (0.0006)     0.0075 (0.0074)  0.0065 (0.0117)  -0.0419*** (0.0151)  -0.0232 (0.0227)                                                       2,105     45
+(3) LPM, region x year FE                             0.0220** (0.0085)   0.0006 (0.0007)    0.0118* (0.0069)  0.0034 (0.0134)  -0.0431*** (0.0151)  -0.0149 (0.0229)                                                       2,105     45
+(4) Logit AME, year FE                               0.0214*** (0.0065)  0.0005* (0.0003)     0.0118 (0.0102)  0.0095 (0.0113)   -0.0468** (0.0184)  -0.0287 (0.0199)                                                       1,381     45
+(5) Logit AME, year + region + income FE             0.0285*** (0.0073)   0.0004 (0.0003)     0.0114 (0.0100)  0.0034 (0.0137)   -0.0456** (0.0180)  -0.0253 (0.0193)                                                       1,381     45
+(6) LPM, (2) + duration                              0.0245*** (0.0081)   0.0007 (0.0006)     0.0113 (0.0076)  0.0077 (0.0118)  -0.0423*** (0.0151)  -0.0231 (0.0227)  0.0079 (0.0148)  -0.0182 (0.0129)  -0.0248 (0.0170)  2,105     45
+(7) LPM, (3) + duration                              0.0224*** (0.0085)   0.0006 (0.0007)   0.0153** (0.0073)  0.0039 (0.0133)  -0.0430*** (0.0150)  -0.0158 (0.0228)  0.0058 (0.0159)  -0.0187 (0.0140)  -0.0229 (0.0175)  2,105     45
+(8) Logit AME, (5) + duration                        0.0279*** (0.0072)   0.0004 (0.0003)    0.0191* (0.0107)  0.0091 (0.0141)   -0.0431** (0.0175)  -0.0285 (0.0195)  0.0155 (0.0171)  -0.0348 (0.0255)  -0.0326 (0.0221)  1,381     45
+(9) Cloglog, year + region + income FE               0.9481*** (0.2202)   0.0117 (0.0085)     0.3638 (0.3408)  0.1157 (0.4511)   -1.5089** (0.5938)  -0.8123 (0.6387)                                                       1,381     45
+(10) Cloglog, (9) + duration                         0.9389*** (0.2251)   0.0123 (0.0080)    0.6262* (0.3670)  0.3155 (0.4742)   -1.4366** (0.5977)  -0.9282 (0.6437)  0.6147 (0.5952)  -1.1151 (0.8670)  -0.9894 (0.7335)  1,381     45
+(11) Cox (Efron), time since entry, region + income   0.7714** (0.3155)  -0.0105 (0.0279)     0.3635 (0.4228)  0.3327 (0.5201)     -0.7737 (1.6383)  -0.0792 (1.6759)                                                       2,105     45
+
+Full output:
+
+(1) LPM, year FE  —  N 2,105, events 45, R2 0.040, within R2 0.019
+                     Estimate  Std. Error       p    2.5%   97.5%
+Coefficient                                                      
+log_deals_l1_3         0.0202      0.0078  0.0109  0.0047  0.0357
+deals_growth           0.0009      0.0007  0.1973 -0.0004  0.0022
+prior_energy_derisk    0.0071      0.0070  0.3145 -0.0068  0.0210
+fit_active             0.0089      0.0109  0.4152 -0.0126  0.0304
+nm_active             -0.0410      0.0148  0.0067 -0.0703 -0.0116
+auction_active        -0.0251      0.0225  0.2665 -0.0698  0.0195
+
+(2) LPM, year + region + income FE  —  N 2,105, events 45, R2 0.047, within R2 0.020
+                     Estimate  Std. Error       p    2.5%   97.5%
+Coefficient                                                      
+log_deals_l1_3         0.0243      0.0081  0.0032  0.0083  0.0404
+deals_growth           0.0007      0.0006  0.2502 -0.0005  0.0020
+prior_energy_derisk    0.0075      0.0074  0.3119 -0.0072  0.0223
+fit_active             0.0065      0.0117  0.5820 -0.0167  0.0297
+nm_active             -0.0419      0.0151  0.0063 -0.0718 -0.0121
+auction_active        -0.0232      0.0227  0.3091 -0.0683  0.0218
+
+(3) LPM, region x year FE  —  N 2,105, events 45, R2 0.125, within R2 0.018
+                     Estimate  Std. Error       p    2.5%   97.5%
+Coefficient                                                      
+log_deals_l1_3         0.0220      0.0085  0.0114  0.0050  0.0389
+deals_growth           0.0006      0.0007  0.4124 -0.0008  0.0020
+prior_energy_derisk    0.0118      0.0069  0.0908 -0.0019  0.0255
+fit_active             0.0034      0.0134  0.8023 -0.0232  0.0300
+nm_active             -0.0431      0.0151  0.0051 -0.0729 -0.0132
+auction_active        -0.0149      0.0229  0.5175 -0.0604  0.0306
+
+(4) Logit AME, year FE  —  N 1,381, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%
+log_deals_l1_3         0.0214      0.0065  0.0011  0.0086  0.0342
+deals_growth           0.0005      0.0003  0.0775 -0.0001  0.0010
+prior_energy_derisk    0.0118      0.0102  0.2443 -0.0081  0.0318
+fit_active             0.0095      0.0113  0.3994 -0.0126  0.0317
+nm_active             -0.0468      0.0184  0.0109 -0.0828 -0.0108
+auction_active        -0.0287      0.0199  0.1502 -0.0678  0.0104
+
+(5) Logit AME, year + region + income FE  —  N 1,381, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%
+log_deals_l1_3         0.0285      0.0073  0.0001  0.0141  0.0429
+deals_growth           0.0004      0.0003  0.1817 -0.0002  0.0009
+prior_energy_derisk    0.0114      0.0100  0.2547 -0.0082  0.0311
+fit_active             0.0034      0.0137  0.8021 -0.0234  0.0302
+nm_active             -0.0456      0.0180  0.0111 -0.0808 -0.0104
+auction_active        -0.0253      0.0193  0.1898 -0.0632  0.0125
+
+(6) LPM, (2) + duration  —  N 2,105, events 45, R2 0.051, within R2 0.025
+                     Estimate  Std. Error       p    2.5%   97.5%
+Coefficient                                                      
+log_deals_l1_3         0.0245      0.0081  0.0030  0.0085  0.0405
+deals_growth           0.0007      0.0006  0.2515 -0.0005  0.0020
+prior_energy_derisk    0.0113      0.0076  0.1403 -0.0038  0.0265
+fit_active             0.0077      0.0118  0.5168 -0.0157  0.0311
+nm_active             -0.0423      0.0151  0.0060 -0.0722 -0.0124
+auction_active        -0.0231      0.0227  0.3119 -0.0680  0.0219
+dur_3_5                0.0079      0.0148  0.5951 -0.0214  0.0371
+dur_6_10              -0.0182      0.0129  0.1608 -0.0436  0.0073
+dur_11plus            -0.0248      0.0170  0.1466 -0.0584  0.0088
+
+(7) LPM, (3) + duration  —  N 2,105, events 45, R2 0.128, within R2 0.022
+                     Estimate  Std. Error       p    2.5%   97.5%
+Coefficient                                                      
+log_deals_l1_3         0.0224      0.0085  0.0095  0.0056  0.0393
+deals_growth           0.0006      0.0007  0.4122 -0.0008  0.0019
+prior_energy_derisk    0.0153      0.0073  0.0376  0.0009  0.0298
+fit_active             0.0039      0.0133  0.7721 -0.0225  0.0302
+nm_active             -0.0430      0.0150  0.0049 -0.0727 -0.0133
+auction_active        -0.0158      0.0228  0.4909 -0.0610  0.0295
+dur_3_5                0.0058      0.0159  0.7165 -0.0257  0.0372
+dur_6_10              -0.0187      0.0140  0.1846 -0.0464  0.0090
+dur_11plus            -0.0229      0.0175  0.1929 -0.0576  0.0118
+
+(8) Logit AME, (5) + duration  —  N 1,381, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%
+log_deals_l1_3         0.0279      0.0072  0.0001  0.0137  0.0420
+deals_growth           0.0004      0.0003  0.1392 -0.0001  0.0009
+prior_energy_derisk    0.0191      0.0107  0.0735 -0.0018  0.0401
+fit_active             0.0091      0.0141  0.5166 -0.0185  0.0367
+nm_active             -0.0431      0.0175  0.0140 -0.0775 -0.0087
+auction_active        -0.0285      0.0195  0.1438 -0.0666  0.0097
+dur_3_5                0.0155      0.0171  0.3635 -0.0180  0.0490
+dur_6_10              -0.0348      0.0255  0.1726 -0.0849  0.0152
+dur_11plus            -0.0326      0.0221  0.1416 -0.0760  0.0109
+
+(9) Cloglog, year + region + income FE  —  N 1,381, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%  hazard ratio
+log_deals_l1_3         0.9481      0.2202  0.0000  0.5166  1.3797        2.5809
+deals_growth           0.0117      0.0085  0.1672 -0.0049  0.0284        1.0118
+prior_energy_derisk    0.3638      0.3408  0.2858 -0.3042  1.0317        1.4387
+fit_active             0.1157      0.4511  0.7976 -0.7684  0.9998        1.1227
+nm_active             -1.5089      0.5938  0.0110 -2.6726 -0.3451        0.2212
+auction_active        -0.8123      0.6387  0.2034 -2.0640  0.4395        0.4439
+
+(10) Cloglog, (9) + duration  —  N 1,381, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%  hazard ratio
+log_deals_l1_3         0.9389      0.2251  0.0000  0.4977  1.3800        2.5571
+deals_growth           0.0123      0.0080  0.1220 -0.0033  0.0279        1.0124
+prior_energy_derisk    0.6262      0.3670  0.0880 -0.0931  1.3455        1.8705
+fit_active             0.3155      0.4742  0.5059 -0.6140  1.2450        1.3709
+nm_active             -1.4366      0.5977  0.0162 -2.6080 -0.2652        0.2377
+auction_active        -0.9282      0.6437  0.1493 -2.1899  0.3334        0.3952
+dur_3_5                0.6147      0.5952  0.3017 -0.5519  1.7813        1.8491
+dur_6_10              -1.1151      0.8670  0.1984 -2.8142  0.5841        0.3279
+dur_11plus            -0.9894      0.7335  0.1773 -2.4270  0.4481        0.3718
+
+(11) Cox (Efron), time since entry, region + income  —  N 2,105, events 45
+                     Estimate  Std. Error       p    2.5%   97.5%  hazard ratio
+log_deals_l1_3         0.7714      0.3155  0.0145  0.2603  1.4673        2.1629
+deals_growth          -0.0105      0.0279  0.7062 -0.0565  0.0583        0.9895
+prior_energy_derisk    0.3635      0.4228  0.3899 -0.4865  1.1546        1.4384
+fit_active             0.3327      0.5201  0.5224 -0.6011  1.3338        1.3947
+nm_active             -0.7737      1.6383  0.6368 -2.5751  0.8091        0.4613
+auction_active        -0.0792      1.6759  0.9623 -2.0061  1.3875        0.9238

@@ -1,0 +1,96 @@
+iso3,policy,country,adopted_raw,removed_raw,adopted,removed,reintroduced,status,source
+ALB,nm,Albania,2019,,2019.0,,,none,RT5
+AGO,nm,Angola,Unknown Year,,2021.0,,,none,GSR 2025 Figure 9
+ATG,nm,Antigua and Barbuda,2017,,2017.0,,,none,RT5
+ARG,nm,Argentina,2017,,2017.0,,,none,RT5
+ARM,nm,Armenia,2015,,2015.0,,,none,RT5
+AZE,nm,Azerbaijan,2020,,2020.0,,,none,RT5
+BHR,nm,Bahrain,2018,,2018.0,,,none,RT5
+BRB,nm,Barbados,2010,,2010.0,,,none,RT5
+BLR,nm,Belarus,Unknown Year,,,,,unknown_adoption,RT5
+BEL,nm,Belgium,2001,,2001.0,,,none,RT5
+BOL,nm,Bolivia,2021,,2021.0,,,none,RT5
+BWA,nm,Botswana,2020,,2020.0,,,none,RT5
+BRA,nm,Brazil,2012,,2012.0,,,none,RT5
+KHM,nm,Cambodia,,,2024.0,,,none,GSR 2025 Figure 9
+CHL,nm,Chile,2012,,2012.0,,,none,RT5
+CHN,nm,China,2013,,2013.0,,,none,RT5
+COL,nm,Colombia,2014,,2014.0,,,none,RT5
+CRI,nm,Costa Rica,2010,,2010.0,,,none,RT5
+CYP,nm,Cyprus,2016,,2016.0,,,none,RT5
+DNK,nm,Denmark,2012,,2012.0,,,none,RT5
+DOM,nm,Dominican Republic,2011,,2011.0,,,none,RT5
+ECU,nm,Ecuador,2018,,2018.0,,,none,RT5
+EGY,nm,Egypt,2013,,2013.0,,,none,RT5
+SLV,nm,El Salvador,2012,,2012.0,,,none,RT5
+FIN,nm,Finland,2009,,2009.0,,,none,RT5
+FRA,nm,France,,,2017.0,,,none,GSR 2025 Figure 9
+GEO,nm,Georgia,2016,,2016.0,,,none,RT5
+GHA,nm,Ghana,2015,,2015.0,,,none,RT5
+GRC,nm,Greece,2015,,2015.0,,,none,RT5
+GRD,nm,Grenada,2011,,2011.0,,,none,RT5
+GTM,nm,Guatemala,2014,,2014.0,,,none,RT5
+HND,nm,Honduras,2014,,2014.0,,,none,RT5
+HUN,nm,Hungary,Unknown year,,,,,unknown_adoption,RT5
+IND,nm,India,2015,,2015.0,,,none,RT5
+IDN,nm,Indonesia,2018,,2018.0,,,none,RT5
+IRN,nm,Iran,Unknown year,,2016.0,,,none,GSR 2025 Figure 9
+IRL,nm,Ireland,2021,,2021.0,,,none,RT5
+ISR,nm,Israel,2013,,2013.0,,,none,RT5
+ITA,nm,Italy,2009,,2009.0,,,none,RT5
+JAM,nm,Jamaica,2015,,2015.0,,,none,RT5
+JPN,nm,Japan,1992,Unknown Year,1992.0,,,unknown_removal,RT5
+JOR,nm,Jordan,2012,,2012.0,,,none,RT5
+KAZ,nm,Kazakhstan,,,2014.0,,,none,GSR 2025 Figure 9
+KEN,nm,Kenya,2019,,2019.0,,,none,RT5
+LVA,nm,Latvia,2014,,2014.0,,,none,RT5
+LSO,nm,Lesotho,2013,,2013.0,,,none,RT5
+LTU,nm,Lithuania,2015,,2015.0,,,none,RT5
+MKD,nm,"Macedonia, North",Unknown year,,2019.0,,,none,GSR 2025 Figure 9
+MYS,nm,Malaysia,2016,,2016.0,,,none,RT5
+MDV,nm,Maldives,2015,,2015.0,,,none,RT5
+MUS,nm,Mauritius,2016,,2016.0,,,none,RT5
+MEX,nm,Mexico,2010,,2010.0,,,none,RT5
+MDA,nm,Moldova,2018,,2018.0,,,none,RT5
+MNG,nm,Mongolia,Unknown year,,2025.0,,,none,GSR 2025 Figure 9
+MNE,nm,Montenegro,2021,,2021.0,,,none,RT5
+MAR,nm,Morocco,,,2014.0,,,none,GSR 2025 Figure 9
+NAM,nm,Namibia,2016,,2016.0,,,none,RT5
+NLD,nm,Netherlands,2004,,2004.0,,,none,RT5
+NIC,nm,Nicaragua,2017,,2017.0,,,none,RT5
+NGA,nm,Nigeria,2017,,2017.0,,,none,RT5
+NOR,nm,Norway,Unknown year,,2016.0,,,none,GSR 2025 Figure 9
+PAK,nm,Pakistan,2015,,2015.0,,,none,RT5
+PSE,nm,"Palestine, State of",2018,,2018.0,,,none,RT5
+PAN,nm,Panama,2008,,2008.0,,,none,RT5
+PER,nm,Peru,2018,,2018.0,,,none,RT5
+PHL,nm,Philippines,2008,,2008.0,,,none,RT5
+POL,nm,Poland,2016,,2016.0,,,none,RT5
+PRT,nm,Portugal,2014,,2014.0,,,none,RT5
+KOR,nm,Republic of Korea,2005,,2005.0,,,none,RT5
+ROU,nm,Romania,2018,,2018.0,,,none,RT5
+RUS,nm,Russian Federation,2021,,2021.0,,,none,RT5
+SAU,nm,Saudi Arabia,2017,,2017.0,,,none,RT5
+SEN,nm,Senegal,2018,,2018.0,,,none,RT5
+SRB,nm,Serbia,2021,,2021.0,,,none,RT5
+SVN,nm,Slovenia,2015,,2015.0,,,none,RT5
+ZAF,nm,South Africa,,,2024.0,,,none,GSR 2025 Figure 9
+ESP,nm,Spain,2010,,2010.0,,,none,RT5
+LKA,nm,Sri Lanka,2010,,2010.0,,,none,RT5
+SWE,nm,Sweden,Unknown year,,,,,unknown_adoption,RT5
+CHE,nm,Switzerland,Unknown year,,2018.0,,,none,GSR 2025 Figure 9
+TZA,nm,Tanzania,Unknown year,,2018.0,,,none,GSR 2025 Figure 9
+THA,nm,Thailand,2019,,2019.0,,,none,RT5
+TUN,nm,Tunisia,,,2020.0,,,none,GSR 2025 Figure 9
+TUR,nm,Turkey,2019,,2019.0,,,none,RT5
+ARE,nm,United Arab Emirates,2015,,2015.0,,,none,RT5
+GBR,nm,United Kingdom,2019,,2019.0,,,none,RT5
+URY,nm,Uruguay,2010,,2010.0,,,none,RT5
+VNM,nm,Vietnam,2017,2019 (reitroduced in 2023),2017.0,2019.0,2023.0,dated,RT5
+ZWE,nm,Zimbabwe,,,2018.0,,,none,GSR 2025 Figure 9
+BGD,nm,BGD,,,2018.0,,,none,GSR 2025 Figure 9
+LBN,nm,LBN,,,2011.0,,,none,GSR 2025 Figure 9
+SGP,nm,SGP,,,2008.0,,,none,GSR 2025 Figure 9
+SYC,nm,SYC,,,2014.0,,,none,GSR 2025 Figure 9
+UKR,nm,UKR,,,2023.0,,,none,GSR 2025 Figure 9
+VCT,nm,VCT,,,2014.0,,,none,GSR 2025 Figure 9

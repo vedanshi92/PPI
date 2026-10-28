@@ -1,0 +1,122 @@
+Fixed effects models on renewable projects (linear probability models)
+SEs clustered by country (CRV1, iso3).
+(a) FE: iso3^year + tech. ND-GAIN and GDP growth vary only by country-year, so these
+    FE absorb them; they are left out of (a).
+(b) FE: iso3 + year + tech, controls: nd_gain_value + gdp_growth.
+Renewable projects: 3,311
+
+==============================================================================
+1. Policy stacking: public_finance ~ derisk
+==============================================================================
+Sample: 3,311 projects
+Raw mean of public_finance by derisk:
+        size   mean
+derisk             
+0       3141  0.193
+1        170  0.706
+
+(a) iso3^year + tech  —  N used: 3,000, R2: 0.540, within R2: 0.010
+             Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                         
+derisk         0.1824      0.0727   2.5083    0.0146  0.0373  0.3276
+
+(b) iso3 + year + tech + controls  —  N used: 3,225, R2: 0.379, within R2: 0.029
+               Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                           
+derisk           0.2780      0.0726   3.8295    0.0002  0.1337  0.4223
+nd_gain_value    0.0133      0.0102   1.3080    0.1944 -0.0069  0.0336
+gdp_growth       0.0008      0.0045   0.1672    0.8676 -0.0083  0.0098
+
+==============================================================================
+2. Bilateral only: public_finance_bilateral ~ derisk_bilateral
+==============================================================================
+Sample: 3,311 projects
+Raw mean of public_finance_bilateral by derisk_bilateral:
+                  size   mean
+derisk_bilateral             
+0                 3287  0.087
+1                   24  0.750
+
+(a) iso3^year + tech  —  N used: 3,000, R2: 0.533, within R2: 0.050
+                  Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                              
+derisk_bilateral    0.6043      0.0875   6.9081       0.0  0.4297  0.7789
+
+(b) iso3 + year + tech + controls  —  N used: 3,225, R2: 0.352, within R2: 0.033
+                  Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                              
+derisk_bilateral    0.5276      0.0890   5.9304    0.0000  0.3507  0.7044
+nd_gain_value      -0.0080      0.0083  -0.9697    0.3349 -0.0245  0.0084
+gdp_growth          0.0018      0.0036   0.4839    0.6297 -0.0055  0.0090
+
+==============================================================================
+3. MLS over BLS: mls_support ~ bls_support
+==============================================================================
+Sample: 3,311 projects
+Raw mean of mls_support by bls_support:
+             size   mean
+bls_support             
+0            3001  0.155
+1             310  0.561
+
+(a) iso3^year + tech  —  N used: 3,000, R2: 0.490, within R2: 0.005
+             Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                         
+bls_support    0.0954      0.0563   1.6959    0.0945 -0.0169  0.2078
+
+(b) iso3 + year + tech + controls  —  N used: 3,225, R2: 0.323, within R2: 0.019
+               Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                           
+bls_support      0.1807      0.0446   4.0484    0.0001  0.0920  0.2695
+nd_gain_value    0.0117      0.0059   1.9675    0.0524 -0.0001  0.0235
+gdp_growth      -0.0029      0.0040  -0.7322    0.4661 -0.0109  0.0050
+
+==============================================================================
+4. Foreign sponsor: derisk ~ foreign_sponsor
+==============================================================================
+Sample: 3,038 projects
+Raw mean of derisk by foreign_sponsor:
+                 size   mean
+foreign_sponsor             
+0.0              1544  0.021
+1.0              1494  0.087
+
+(a) iso3^year + tech  —  N used: 2,736, R2: 0.486, within R2: 0.000
+                 Estimate  Std. Error  t value  Pr(>|t|)   2.5%   97.5%
+Coefficient                                                            
+foreign_sponsor    0.0086      0.0123    0.698    0.4878 -0.016  0.0331
+
+(b) iso3 + year + tech + controls  —  N used: 2,973, R2: 0.240, within R2: 0.003
+                 Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                             
+foreign_sponsor     0.024      0.0120   2.0020    0.0486  0.0002  0.0479
+nd_gain_value      -0.001      0.0060  -0.1708    0.8648 -0.0129  0.0109
+gdp_growth         -0.003      0.0034  -0.8792    0.3818 -0.0096  0.0037
+
+==============================================================================
+5. Award method: derisk ~ award method dummies (ref: Competitive bidding)
+==============================================================================
+Sample: 2,117 projects
+Raw mean of derisk by award method:
+                         size   mean
+award_method                        
+Competitive bidding       985  0.069
+Competitive negotiation     8  0.000
+Direct negotiation        290  0.069
+License scheme            834  0.044
+
+(a) iso3^year + tech  —  N used: 1,910, R2: 0.494, within R2: 0.001
+                                       Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                                                   
+award_method::Competitive negotiation   -0.0046      0.0102  -0.4557    0.6504 -0.0251  0.0158
+award_method::Direct negotiation        -0.0257      0.0126  -2.0374    0.0465 -0.0510 -0.0004
+award_method::License scheme            -0.0132      0.0125  -1.0572    0.2951 -0.0382  0.0118
+
+(b) iso3 + year + tech + controls  —  N used: 2,075, R2: 0.314, within R2: 0.006
+                                       Estimate  Std. Error  t value  Pr(>|t|)    2.5%   97.5%
+Coefficient                                                                                   
+award_method::Competitive negotiation    0.0028      0.0260   0.1059    0.9159 -0.0492  0.0547
+award_method::Direct negotiation         0.0344      0.0176   1.9483    0.0556 -0.0008  0.0696
+award_method::License scheme             0.0104      0.0173   0.6022    0.5491 -0.0242  0.0451
+nd_gain_value                           -0.0072      0.0065  -1.1134    0.2695 -0.0201  0.0057
+gdp_growth                              -0.0045      0.0040  -1.1256    0.2644 -0.0125  0.0035
