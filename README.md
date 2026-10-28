@@ -26,7 +26,7 @@ PPI/
 │   ├── step10_hazard.py        <- hazard model of first de-risking
 │   ├── step11_local_projections.py <- local projections: which leads
 │   └── step12_stacked_did.py   <- shape-matched stacked DiD
-├── data/                       <- not committed to git
+├── data/                       <- committed: raw inputs, interim files and outputs
 │   ├── raw/                    <- put your downloaded files here (see step 2)
 │   ├── interim/                <- outputs of steps 1-4
 │   └── processed/              <- final panel + summary statistics
@@ -179,9 +179,14 @@ to `treat_year` (never-treated countries stay to 2024); `event` = 1 in `treat_ye
 Regressors: log(1 + `deals_l1_3`), `deals_growth`, `prior_energy_derisk`, `fit_active`,
 `nm_active`, `auction_active`. Specifications: LPM with year FE; + region and income-group FE;
 region × year FE; logit average marginal effects with year FE and with year + region + income
-FE. SEs clustered by country. Rows with a missing regressor are dropped (`deals_growth` starts
-in 1996). Output: `data/processed/hazard_model.txt`. `region` and `income_group` (fixed per
-country in the PPI export) are in the country-year panel.
+FE; the same LPM and logit models plus duration dummies (years since `entry_year`: 0–2
+reference, 3–5, 6–10, 11+); complementary log-log (proportional hazards) with year + region +
+income FE, with and without duration dummies; and a Cox model with Efron ties on the same
+multiple-record data (analysis time = years since entry, delayed entry for countries that
+entered before 1993, region and income dummies). SEs clustered by country. Rows with a missing
+regressor are dropped (`deals_growth` starts in 1996). Output: `data/processed/hazard_model.txt`.
+`region` and `income_group` (fixed per country in the PPI export) are in the country-year
+panel.
 
 **Step 11** runs local projections on the balanced zero-filled country-year panel to see
 which leads. `ldeals` = log(1 + `n_ren_nd`), `derisk` = `ren_derisk`. For h = 0–5 it
@@ -197,10 +202,8 @@ T−1), matched on the demeaned path of log(1 + `n_ren`) over T−5..T−1, with
 different region and, if the treated country had pre-period deals, only controls that also had
 some. Blocks T−5..T+5 are stacked and a Poisson event study (reference rel = −1; unit FE,
 event × year FE; clustered by country) and a pooled treated × post model are estimated, with a
-joint pre-trend test and Rambachan–Roth relative-magnitudes bounds (confidence sets from
-simulating the coefficients — more conservative than the R HonestDiD package's conditional
-intervals). Output: `data/processed/stacked_did.txt`, `data/interim/stacked_did_matches.csv`,
-`figures/9_stacked_did.png`.
+joint pre-trend test. Output: `data/processed/stacked_did.txt`,
+`data/interim/stacked_did_matches.csv`, `figures/9_stacked_did.png`.
 
 ## 5. Country matching
 
@@ -212,7 +215,9 @@ export has names that don't match, the script prints them. Add them to the dicti
 
 ## 6. Before sharing with reviewers
 
-- `data/` is git-ignored. Point reviewers to the download links above rather than
-  redistributing the raw files, unless their licences allow it.
+- `data/` (raw inputs included) is committed so the pipeline can be re-run after a fresh
+  checkout. If the repository is or becomes public, check that the PPI, WGI, ND-GAIN and REN21
+  licences allow redistributing the raw files; otherwise remove `data/raw/` and point reviewers
+  to the download links above.
 - Double check `data/processed/project_panel.csv` doesn't contain anything you don't want
   public before uploading it to a replication archive (e.g. Harvard Dataverse, OSF).

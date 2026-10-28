@@ -15,12 +15,7 @@ accelerate the market (renewable deals WITHOUT de-risking, n_ren_nd)?
    country), treated, rel = year - T.
 5. Poisson of n_ren_nd on rel x treated (reference rel = -1), unit FE and event x year FE,
    clustered by country; and a pooled treated x post version.
-6. Pre-trend check, then Rambachan-Roth (2023) relative-magnitudes bounds: post-period
-   violations of parallel trends can change by at most Mbar times the largest pre-period
-   change. Confidence sets come from simulating the event-study coefficients
-   (N(beta, V), 20,000 draws) and taking the 2.5% / 97.5% quantiles of the lower / upper
-   bounds — more conservative than the HonestDiD package's conditional (ARP) intervals,
-   which need R.
+6. Pre-trend check: joint Wald test that all pre-period coefficients are zero.
 
 Writes data/processed/stacked_did.txt, data/interim/stacked_did_matches.csv and
 figures/9_stacked_did.png.
@@ -44,9 +39,6 @@ from config import COUNTRY_YEAR_PANEL, INTERIM, OUT, STACKED_DID_TXT
 WINDOW = 5
 N_CONTROLS = 3
 REGION_PENALTY = 1.0
-MBARS = [0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
-N_DRAWS = 20_000
-RNG = np.random.default_rng(12345)
 
 
 def match_events(panel: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -89,37 +81,6 @@ def match_events(panel: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return pd.DataFrame(matches), pd.concat(stacks, ignore_index=True)
 
 
-def rm_bounds(beta: pd.Series, vcov: pd.DataFrame, pre: list[int], post: list[int]) -> pd.DataFrame:
-    """Relative-magnitudes bounds on the average post-period effect and on each post period.
-    delta_pre = beta_pre (delta_-1 = 0); Delta = max |delta_{s+1} - delta_s| over the pre
-    period; |delta_k| <= (k+1) * Mbar * Delta for post period k = 0, 1, ...  The bound on
-    the average of delta over K post periods is Mbar * Delta * mean(k+1)."""
-    order = [f"rel{r}" for r in pre + post]
-    draws = RNG.multivariate_normal(beta[order].values, vcov.loc[order, order].values, N_DRAWS)
-    draws = pd.DataFrame(draws, columns=order)
-    pre_path = np.column_stack([draws[[f"rel{r}" for r in pre]].values, np.zeros(N_DRAWS)])
-    delta_max = np.abs(np.diff(pre_path, axis=1)).max(axis=1)
-    pre_path_hat = np.append(beta[[f"rel{r}" for r in pre]].values, 0.0)
-    delta_hat = np.abs(np.diff(pre_path_hat)).max()
-
-    targets = {"average post (rel 0..5)": (post, np.mean([k + 1 for k in range(len(post))]))}
-    for k, r in enumerate(post):
-        targets[f"rel {r}"] = ([r], k + 1)
-    rows = []
-    for name, (periods, mult) in targets.items():
-        cols = [f"rel{r}" for r in periods]
-        est_hat = beta[cols].mean()
-        est = draws[cols].mean(axis=1).values
-        for mbar in MBARS:
-            half_hat = mbar * delta_hat * mult
-            half = mbar * delta_max * mult
-            lo, hi = np.quantile(est - half, 0.025), np.quantile(est + half, 0.975)
-            rows.append({"target": name, "Mbar": mbar,
-                         "identified_lo": est_hat - half_hat, "identified_hi": est_hat + half_hat,
-                         "ci_lo": lo, "ci_hi": hi, "excludes_0": (lo > 0) or (hi < 0)})
-    return pd.DataFrame(rows)
-
-
 def main():
     print("=" * 70)
     print("Step 12: shape-matched stacked DiD — does de-risking accelerate the market?")
@@ -145,7 +106,6 @@ def main():
     beta = pd.Series(tidy["Estimate"].values, index=[f"rel{r}" for r in tidy.index])
     vcov = pd.DataFrame(es._vcov, index=beta.index, columns=beta.index)
     pre = [r for r in tidy.index if r < -1]
-    post = [r for r in tidy.index if r >= 0]
 
     # Joint test that all pre-period coefficients are zero (Wald, chi2 with len(pre) df)
     from scipy import stats
@@ -153,10 +113,6 @@ def main():
     v_pre = vcov.loc[[f"rel{r}" for r in pre], [f"rel{r}" for r in pre]].values
     wald = float(b_pre @ np.linalg.solve(v_pre, b_pre))
     wald_p = 1 - stats.chi2.cdf(wald, len(pre))
-
-    bounds = rm_bounds(beta, vcov, pre, post)
-    avg = bounds[bounds["target"] == "average post (rel 0..5)"]
-    breakdown = avg.loc[avg["excludes_0"], "Mbar"].max() if avg["excludes_0"].any() else None
 
     p = pooled.tidy().loc["treated_post"]
     n_events = matches["event_id"].nunique()
@@ -182,13 +138,6 @@ def main():
         "",
         f"Pre-trend check: joint Wald test that rel {pre[0]}..{pre[-1]} are all zero: "
         f"chi2({len(pre)}) = {wald:.2f}, p = {wald_p:.3f}.",
-        "",
-        "Honest DiD (Rambachan-Roth relative magnitudes). Identified set and 95% confidence set",
-        "for the average post-period effect and each post period, by Mbar:",
-        bounds.round(4).to_string(index=False),
-        "",
-        f"Breakdown Mbar (largest Mbar at which the average post effect's 95% set excludes 0): "
-        f"{breakdown if breakdown is not None else 'none — not robust even at Mbar = 0'}",
     ]
     report = "\n".join(lines)
     print(report)
