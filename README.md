@@ -198,8 +198,11 @@ panel.
 which leads. `ldeals` = log(1 + `n_ren_nd`), `derisk` = `ren_derisk`. For h = 0–5 it
 estimates `derisk`(t+h) on `ldeals`(t) and `ldeals`(t+h) on `derisk`(t), each with two lags of
 both, country and year FE, SEs clustered by country. Coefficients are standardised by
-SD(shock) / SD(outcome). Output: `data/processed/local_projections.txt` and
-`figures/8_local_projections.png`.
+SD(shock) / SD(outcome). Each is also run with country-year controls lagged one year
+relative to the shock year (ND-GAIN vulnerability, WGI regulatory quality, log GDP per capita,
+currency depreciation; no real interest rate), next to a same-sample run without them. Output:
+`data/processed/local_projections.txt`, `figures/8_local_projections.png` and
+`figures/8b_local_projections_controls.png`.
 
 **Step 12** runs a shape-matched stacked DiD: does the first de-risked renewable deal
 accelerate deals without de-risking (`n_ren_nd`)? Events are treated countries with

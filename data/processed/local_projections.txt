@@ -3,8 +3,35 @@ ldeals = log(1 + n_ren_nd); derisk = ren_derisk (any de-risked renewable deal in
 Controls: 2 lags of ldeals and derisk; country and year FE; SEs clustered by country.
 Standardised coefficient = coef x SD(shock) / SD(outcome); full-panel SDs: SD(ldeals) = 0.583, SD(derisk) = 0.151.
 Means: ldeals = 0.217, derisk = 0.023.
+Controls (third variant): vulnerability_l1, reg_quality_l1, log_gdppc_l1, depreciation_l1, each at t-1 relative to the shock year t;
+  real interest rate left out. Depreciation winsorised at 1%/99%; regulatory quality 1997/1999/2001 interpolated.
+Controls sample: 2,995 of 4,095 country-years.
+
+Standardised coefficients by variant (* p<0.1, ** p<0.05, *** p<0.01):
 
 Market -> de-risking: derisk(t+h) on ldeals(t)
+   baseline  N (baseline) controls sample, no controls  N (controls sample, no controls) with controls  N (with controls)
+h                                                                                                                        
+0   0.143**          3861                     0.185***                              2995      0.185***               2995
+1  0.147***          3744                     0.169***                              2888      0.169***               2888
+2  0.119***          3627                      0.095**                              2781       0.095**               2781
+3     0.020          3510                       -0.003                              2674        -0.002               2674
+4     0.011          3393                        0.000                              2565         0.001               2565
+5    -0.047          3276                       -0.042                              2456        -0.040               2456
+
+De-risking -> market: ldeals(t+h) on derisk(t)
+   baseline  N (baseline) controls sample, no controls  N (controls sample, no controls) with controls  N (with controls)
+h                                                                                                                        
+0   0.062**          3861                     0.077***                              2995      0.076***               2995
+1  0.061***          3744                     0.057***                              2888      0.057***               2888
+2  0.055***          3627                      0.048**                              2781       0.048**               2781
+3   0.047**          3510                      0.048**                              2674       0.048**               2674
+4   -0.032*          3393                      -0.037*                              2565       -0.037*               2565
+5     0.012          3276                        0.018                              2456         0.019               2456
+
+Full output:
+
+Market -> de-risking: derisk(t+h) on ldeals(t) — baseline
      coef      se       p  std_coef  std_lo  std_hi     N
 h                                                        
 0  0.0369  0.0170  0.0320    0.1429  0.0125  0.2732  3861
@@ -14,7 +41,7 @@ h
 4  0.0029  0.0110  0.7917    0.0113 -0.0729  0.0954  3393
 5 -0.0122  0.0109  0.2627   -0.0474 -0.1307  0.0360  3276
 
-De-risking -> market: ldeals(t+h) on derisk(t)
+De-risking -> market: ldeals(t+h) on derisk(t) — baseline
      coef      se       p  std_coef  std_lo  std_hi     N
 h                                                        
 0  0.2390  0.1074  0.0281    0.0617  0.0068  0.1167  3861
@@ -23,3 +50,43 @@ h
 3  0.1809  0.0897  0.0460    0.0467  0.0008  0.0926  3510
 4 -0.1244  0.0675  0.0678   -0.0321 -0.0667  0.0024  3393
 5  0.0481  0.0815  0.5563    0.0124 -0.0293  0.0541  3276
+
+Market -> de-risking: derisk(t+h) on ldeals(t) — controls sample, no controls
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.0479  0.0181  0.0095    0.1853  0.0462  0.3243  2995
+1  0.0436  0.0107  0.0001    0.1686  0.0867  0.2505  2888
+2  0.0245  0.0115  0.0356    0.0949  0.0065  0.1832  2781
+3 -0.0008  0.0136  0.9544   -0.0030 -0.1074  0.1013  2674
+4  0.0001  0.0114  0.9916    0.0005 -0.0869  0.0878  2565
+5 -0.0107  0.0122  0.3820   -0.0415 -0.1353  0.0522  2456
+
+De-risking -> market: ldeals(t+h) on derisk(t) — controls sample, no controls
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.2968  0.1101  0.0081    0.0767  0.0203  0.1330  2995
+1  0.2224  0.0747  0.0035    0.0575  0.0192  0.0957  2888
+2  0.1846  0.0793  0.0218    0.0477  0.0071  0.0883  2781
+3  0.1854  0.0879  0.0372    0.0479  0.0029  0.0929  2674
+4 -0.1426  0.0755  0.0617   -0.0368 -0.0755  0.0018  2565
+5  0.0709  0.0785  0.3684    0.0183 -0.0219  0.0585  2456
+
+Market -> de-risking: derisk(t+h) on ldeals(t) — with controls
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.0477  0.0181  0.0097    0.1847  0.0457  0.3236  2995
+1  0.0437  0.0107  0.0001    0.1691  0.0875  0.2508  2888
+2  0.0246  0.0116  0.0351    0.0954  0.0068  0.1840  2781
+3 -0.0006  0.0136  0.9633   -0.0024 -0.1068  0.1019  2674
+4  0.0003  0.0114  0.9811    0.0011 -0.0866  0.0887  2565
+5 -0.0104  0.0123  0.3960   -0.0404 -0.1344  0.0536  2456
+
+De-risking -> market: ldeals(t+h) on derisk(t) — with controls
+     coef      se       p  std_coef  std_lo  std_hi     N
+h                                                        
+0  0.2959  0.1102  0.0084    0.0764  0.0200  0.1329  2995
+1  0.2217  0.0749  0.0038    0.0573  0.0189  0.0956  2888
+2  0.1849  0.0796  0.0220    0.0478  0.0070  0.0885  2781
+3  0.1871  0.0879  0.0354    0.0483  0.0034  0.0933  2674
+4 -0.1420  0.0765  0.0661   -0.0367 -0.0758  0.0025  2565
+5  0.0724  0.0793  0.3629    0.0187 -0.0219  0.0593  2456
