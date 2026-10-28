@@ -134,6 +134,8 @@ CONFIG = {
 
     # --- ND-GAIN (wide CSV: ISO3, Name, then one column per year) ---
     "nd_gain_file": RAW / "nd_gain.csv",
+    # ND-GAIN vulnerability score (0-1, higher = more vulnerable), same wide format
+    "nd_gain_vulnerability_file": RAW / "nd_gain_vulnerability.csv",
     "nd_gain_country_col": "ISO3",
     "nd_gain_wide_id_cols": ["ISO3", "Name"],
 

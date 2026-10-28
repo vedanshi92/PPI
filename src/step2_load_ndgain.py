@@ -1,8 +1,8 @@
 """
 step2_load_ndgain.py
 --------------------
-Reshapes the wide ND-GAIN country index (one column per year) into a long
-country-year panel. Writes data/interim/nd_gain_panel.csv.
+Reshapes the wide ND-GAIN country index and vulnerability score (one column per
+year) into a long country-year panel. Writes data/interim/nd_gain_panel.csv.
 
 Run from the project root:  python3 src/step2_load_ndgain.py
 """
@@ -20,6 +20,13 @@ def main():
         country_col=CONFIG["nd_gain_country_col"],
         wide_id_cols=CONFIG["nd_gain_wide_id_cols"],
     )
+    vulnerability = load_nd_gain(
+        CONFIG["nd_gain_vulnerability_file"],
+        country_col=CONFIG["nd_gain_country_col"],
+        wide_id_cols=CONFIG["nd_gain_wide_id_cols"],
+        value_name="nd_gain_vulnerability",
+    )
+    panel = panel.merge(vulnerability, on=["iso3", "year"], how="outer")
     panel.to_csv(ND_GAIN_PANEL, index=False)
     print(f"[ND-GAIN] Wrote {len(panel):,} country-year rows to {ND_GAIN_PANEL}")
 

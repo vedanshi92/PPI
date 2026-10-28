@@ -28,6 +28,10 @@ Specifications (SEs clustered by country):
        time = years since entry, (start, stop] records, delayed entry for countries that
        entered before 1993; covariates X + region + income dummies; SEs from a
        country-cluster bootstrap
+  (A1)-(A6) with country-year controls lagged one year: ND-GAIN vulnerability, WGI
+       regulatory quality, log GDP per capita, real interest rate, currency depreciation
+       (A1 = same sample, no controls). (B1)-(B6) the same without the real interest rate,
+       which is missing for many countries.
 
 Rows with a missing regressor are dropped (deals_growth needs t-1..t-6, so it starts in
 1996; fit_active / nm_active are blank where REN21 gives no date).
@@ -57,9 +61,44 @@ COX_BOOT = 500   # country-cluster bootstrap replications for the Cox SEs
 COX_SEED = 2024
 X = ["log_deals_l1_3", "deals_growth", "prior_energy_derisk", "fit_active", "nm_active",
      "auction_active"]
+# Country-year controls, all lagged one year (t-1)
+CONTROLS = ["vulnerability_l1", "reg_quality_l1", "log_gdppc_l1", "real_interest_l1",
+            "depreciation_l1"]
+CONTROLS_NO_RIR = [c for c in CONTROLS if c != "real_interest_l1"]
+WINSOR = (0.01, 0.99)  # depreciation is winsorised at these panel quantiles
+
+
+def add_lagged_controls(panel: pd.DataFrame) -> pd.DataFrame:
+    """Country-year controls at t-1, computed on the full panel (so the first risk-set year
+    can use the year before it):
+      vulnerability_l1  ND-GAIN vulnerability score
+      reg_quality_l1    WGI regulatory quality; WGI skips 1997, 1999 and 2001, so interior
+                        gaps are filled by linear interpolation within country first
+      log_gdppc_l1      log GDP per capita (constant USD)
+      real_interest_l1  real interest rate (%)
+      depreciation_l1   change in log local-currency units per USD from t-2 to t-1
+                        (positive = depreciation), winsorised at the 1st/99th percentiles
+                        because currency redenominations create extreme jumps"""
+    p = panel.sort_values(["iso3", "year"]).copy()
+    g = p.groupby("iso3")
+    rq = g["regulatory_quality"].transform(lambda s: s.interpolate(limit_area="inside"))
+    log_fx = np.log(p["exchange_rate_lcu_usd"].where(p["exchange_rate_lcu_usd"] > 0))
+    depreciation = log_fx.groupby(p["iso3"]).diff()
+    depreciation = depreciation.clip(*depreciation.quantile(list(WINSOR)))
+    current = pd.DataFrame({
+        "vulnerability_l1": p["nd_gain_vulnerability"],
+        "reg_quality_l1": rq,
+        "log_gdppc_l1": np.log(p["gdp_per_capita"].where(p["gdp_per_capita"] > 0)),
+        "real_interest_l1": p["real_interest_rate"],
+        "depreciation_l1": depreciation,
+    })
+    for col in CONTROLS:
+        p[col] = current[col].groupby(p["iso3"]).shift(1)
+    return p
 
 
 def build_sample(panel: pd.DataFrame) -> pd.DataFrame:
+    panel = add_lagged_controls(panel)
     start = np.maximum(panel["entry_year"].astype(float), START_YEAR)
     end = panel["treat_year"].astype(float).fillna(panel["year"].max())
     risk = panel[(panel["year"] >= start) & (panel["year"] <= end)].copy()
@@ -77,7 +116,7 @@ def fe_design(data: pd.DataFrame, fe: list[str], extra: list[str] | None = None)
     """Complete cases with FE cells that contain no event dropped (in a logit / cloglog
     they predict 0 perfectly, so a conditional model would drop them too), and the design
     matrix with FE dummies. `extra` regressors (e.g. duration dummies) go after X."""
-    d = data.dropna(subset=["event", *X]).copy()
+    d = data.dropna(subset=["event", *X, *(extra or [])]).copy()
     for f in fe:
         d = d[d.groupby(f)["event"].transform("max") > 0]
     dummies = pd.get_dummies(d[fe].astype(str), drop_first=True, dtype=float)
@@ -88,9 +127,10 @@ def fe_design(data: pd.DataFrame, fe: list[str], extra: list[str] | None = None)
     return d, exog
 
 
-def logit_ame(data: pd.DataFrame, fe: list[str], duration: bool = False):
+def logit_ame(data: pd.DataFrame, fe: list[str], duration: bool = False,
+              controls: list[str] | None = None):
     """Logit with FE dummies, SEs clustered by country; average marginal effects."""
-    d, exog = fe_design(data, fe + (["dur_bin"] if duration else []))
+    d, exog = fe_design(data, fe + (["dur_bin"] if duration else []), controls)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         fit = sm.Logit(d["event"], exog).fit(
@@ -98,7 +138,7 @@ def logit_ame(data: pd.DataFrame, fe: list[str], duration: bool = False):
             cov_kwds={"groups": pd.factorize(d["iso3"])[0]})
     ame = fit.get_margeff(at="overall").summary_frame()
     ame.index = [rename_dur(i) for i in ame.index]
-    keep = X + (DUR_TERMS if duration else [])
+    keep = X + (DUR_TERMS if duration else []) + (controls or [])
     ame = ame.loc[keep].rename(columns={"dy/dx": "Estimate", "Std. Err.": "Std. Error",
                                         "Pr(>|z|)": "p", "Conf. Int. Low": "2.5%",
                                         "Cont. Int. Hi.": "97.5%"})
@@ -110,17 +150,18 @@ def rename_dur(name: str) -> str:
     return name.replace("dur_bin_", "dur_")
 
 
-def cloglog_fit(data: pd.DataFrame, fe: list[str], duration: bool = False):
+def cloglog_fit(data: pd.DataFrame, fe: list[str], duration: bool = False,
+                controls: list[str] | None = None):
     """Binomial GLM with a complementary log-log link (the discrete-time proportional-hazards
     model), FE dummies, SEs clustered by country. Coefficients are log hazard ratios."""
-    d, exog = fe_design(data, fe + (["dur_bin"] if duration else []))
+    d, exog = fe_design(data, fe + (["dur_bin"] if duration else []), controls)
     exog.columns = [rename_dur(c) for c in exog.columns]
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         fit = sm.GLM(d["event"], exog,
                      family=sm.families.Binomial(link=sm.families.links.CLogLog())).fit(
             cov_type="cluster", cov_kwds={"groups": pd.factorize(d["iso3"])[0]})
-    keep = X + (DUR_TERMS if duration else [])
+    keep = X + (DUR_TERMS if duration else []) + (controls or [])
     ci = fit.conf_int().loc[keep]
     out = pd.DataFrame({"Estimate": fit.params[keep], "Std. Error": fit.bse[keep],
                         "p": fit.pvalues[keep], "2.5%": ci[0], "97.5%": ci[1]})
@@ -128,19 +169,20 @@ def cloglog_fit(data: pd.DataFrame, fe: list[str], duration: bool = False):
     return out, len(d), int(d["event"].sum())
 
 
-def cox_fit(data: pd.DataFrame):
+def cox_fit(data: pd.DataFrame, controls: list[str] | None = None):
     """Cox proportional hazards with Efron ties on the multiple-record (counting-process)
     data: each country-year is a (start, stop] interval in years since entry, with delayed
     entry for countries already in the market before 1993. Covariates X + region and income
     dummies. SEs are clustered by country with a cluster bootstrap (resampling countries):
     statsmodels' robust covariance uses score residuals that ignore delayed entry (they
     don't sum to zero here), so it can't be used."""
-    d = data.dropna(subset=["event", *X]).copy()
+    regs = X + (controls or [])
+    d = data.dropna(subset=["event", *regs]).copy()
     d["start"] = d["years_since_entry"]
     d["stop"] = d["start"] + 1
     dummies = pd.get_dummies(d[["region", "income_group"]].astype(str), drop_first=True,
                              dtype=float)
-    exog = pd.concat([d[X], dummies], axis=1)
+    exog = pd.concat([d[regs], dummies], axis=1)
 
     def fit_params(rows: pd.Index) -> np.ndarray:
         with warnings.catch_warnings():
@@ -170,10 +212,11 @@ def cox_fit(data: pd.DataFrame):
         if np.all(np.isfinite(b)):
             draws.append(b)
     draws = pd.DataFrame(draws, columns=exog.columns)
-    bse = draws[X].std()
-    out = pd.DataFrame({"Estimate": params[X], "Std. Error": bse,
-                        "p": 2 * stats.norm.sf(np.abs(params[X] / bse)),
-                        "2.5%": draws[X].quantile(0.025), "97.5%": draws[X].quantile(0.975)})
+    bse = draws[regs].std()
+    out = pd.DataFrame({"Estimate": params[regs], "Std. Error": bse,
+                        "p": 2 * stats.norm.sf(np.abs(params[regs] / bse)),
+                        "2.5%": draws[regs].quantile(0.025),
+                        "97.5%": draws[regs].quantile(0.975)})
     out["hazard ratio"] = np.exp(out["Estimate"])
     return out, len(d), int(d["event"].sum())
 
@@ -253,26 +296,70 @@ def main():
              "(9) Cloglog, year + region + income FE", "(10) Cloglog, (9) + duration",
              "(11) Cox (Efron), time since entry, region + income"]
 
-    # Side-by-side table: estimate (SE) with stars
-    rows = X + DUR_TERMS
-    table = pd.DataFrame(index=rows + ["N", "events"])
-    for label in order:
-        est, n, events, _ = results[label]
-        table[label] = [f"{est.at[r, 'Estimate']:.4f}{stars(est.at[r, 'p'])} "
-                        f"({est.at[r, 'Std. Error']:.4f})" if r in est.index else ""
-                        for r in rows] + [f"{n:,}", f"{events}"]
+    # --- Controls (all at t-1). Each set gets a same-sample baseline without controls, so a
+    # change in the deal-flow coefficient isn't confused with the change in sample.
+    base_fe = "year + region + income_group"
+    control_sets = [("all controls", CONTROLS, "A"),
+                    ("controls excl. real interest rate", CONTROLS_NO_RIR, "B")]
+    control_order = []
+    for name, ctrl, tag in control_sets:
+        sample = risk.dropna(subset=X + ctrl)
+        specs = [
+            (f"({tag}1) LPM, (6) on {name} sample, no controls", sample, [dur], base_fe),
+            (f"({tag}2) LPM, (6) + {name}", sample, [dur, *ctrl], base_fe),
+            (f"({tag}3) LPM, (7) + {name}", sample, [dur, *ctrl], "region^year"),
+        ]
+        for label, data, extra, fe in specs:
+            rhs = " + ".join(X + extra)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                fit = pf.feols(f"event ~ {rhs} | {fe}", data=data, vcov={"CRV1": "iso3"})
+            t = fit.tidy().rename(columns={"Pr(>|t|)": "p"})
+            results[label] = (t[["Estimate", "Std. Error", "p", "2.5%", "97.5%"]], fit._N,
+                              int(fit._data["event"].sum()),
+                              f"R2 {fit._r2:.3f}, within R2 {fit._r2_within:.3f}")
+            control_order.append(label)
+        for label, func, kwargs in [
+            (f"({tag}4) Logit AME, (8) + {name}", logit_ame,
+             {"fe": ["year", "region", "income_group"], "duration": True, "controls": ctrl}),
+            (f"({tag}5) Cloglog, (10) + {name}", cloglog_fit,
+             {"fe": ["year", "region", "income_group"], "duration": True, "controls": ctrl}),
+            (f"({tag}6) Cox, (11) + {name}", cox_fit, {"controls": ctrl}),
+        ]:
+            est, n, events = func(risk, **kwargs)
+            results[label] = (est, n, events, "")
+            control_order.append(label)
+
+    def side_by_side(labels: list[str], rows: list[str]) -> str:
+        table = pd.DataFrame(index=rows + ["N", "events"])
+        for label in labels:
+            est, n, events, _ = results[label]
+            table[label] = [f"{est.at[r, 'Estimate']:.4f}{stars(est.at[r, 'p'])} "
+                            f"({est.at[r, 'Std. Error']:.4f})" if r in est.index else ""
+                            for r in rows] + [f"{n:,}", f"{events}"]
+        with pd.option_context("display.width", 400, "display.max_columns", 30,
+                               "display.max_colwidth", 30):
+            return table.T.to_string()
 
     lines += ["", "Estimates, SE in parentheses. LPM: coefficients; logit: average marginal "
               "effects;", "cloglog and Cox: coefficients = log hazard ratios (hazard ratios in "
               "the full output).", "Duration dummies: years since entry, reference 0-2. "
               "* p<0.1, ** p<0.05, *** p<0.01.", "Logit and cloglog drop FE cells with no "
               "event; Cox uses time since entry as the baseline, so no year FE; its SEs and "
-              f"CI come from a {COX_BOOT}-replication country-cluster bootstrap.", ""]
-    with pd.option_context("display.width", 300, "display.max_columns", 20,
-                           "display.max_colwidth", 30):
-        lines.append(table.T.to_string())
+              f"CI come from a {COX_BOOT}-replication country-cluster bootstrap.", "",
+              "TABLE 1 — main specifications", side_by_side(order, X + DUR_TERMS), "",
+              "TABLE 2 — with country-year controls, all lagged one year (t-1):",
+              "  vulnerability_l1 = ND-GAIN vulnerability; reg_quality_l1 = WGI regulatory "
+              "quality (1997/1999/2001 interpolated);",
+              "  log_gdppc_l1 = log GDP per capita; real_interest_l1 = real interest rate (%); "
+              "depreciation_l1 = change in log LCU per USD",
+              f"  (winsorised at {WINSOR[0]:.0%}/{WINSOR[1]:.0%}). (A1)/(B1) re-run (6) on the "
+              "controls sample without controls, for comparison.",
+              "Missing in the main estimation sample: "
+              + ", ".join(f"{c} {int(complete[c].isna().sum())}" for c in CONTROLS), "",
+              side_by_side(control_order, X + CONTROLS)]
     lines += ["", "Full output:"]
-    for label in order:
+    for label in order + control_order:
         est, n, events, note = results[label]
         lines += ["", f"{label}  —  N {n:,}, events {events}" + (f", {note}" if note else ""),
                   est.round(4).to_string()]

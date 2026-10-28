@@ -44,6 +44,7 @@ Place each file in `data/raw/` with the filename below (rename after downloading
 | ND-GAIN Country Index | https://gain.nd.edu/our-work/country-index/download-data/ (the `gain.csv` country time series) | `data/raw/nd_gain.csv` |
 | REN21 feed-in tariff and net metering / billing policies | REN21 GSR 2023 Supply Data Pack, table RT5 | `data/raw/ren21/GSR2023_Supply-Data-Pack.xlsx` |
 | REN21 policies in force 2024 (fallback adoption years) | REN21 Global Status Report 2025, Global Overview Figure 9 (Excel, "References" sheet) | `data/raw/ren21/GSR_2025_GO_Figure_9.xlsx` |
+| ND-GAIN vulnerability score | same ND-GAIN download (`vulnerability.csv`; `vulnerability_delta.csv` kept but unused) | `data/raw/nd_gain_vulnerability.csv` |
 | Worldwide Governance Indicators | https://www.worldbank.org/en/publication/worldwide-governance-indicators (the full Excel dataset, one sheet per dimension) | `data/raw/wgidata.xlsx` |
 
 WDI indicators are **not** downloaded by hand: step 4 fetches them from the World Bank API
@@ -183,7 +184,12 @@ FE; the same LPM and logit models plus duration dummies (years since `entry_year
 reference, 3–5, 6–10, 11+); complementary log-log (proportional hazards) with year + region +
 income FE, with and without duration dummies; and a Cox model with Efron ties on the same
 multiple-record data (analysis time = years since entry, delayed entry for countries that
-entered before 1993, region and income dummies). SEs clustered by country. Rows with a missing
+entered before 1993, region and income dummies; SEs from a country-cluster bootstrap). Each of
+the main models is also run with country-year controls lagged one year — ND-GAIN vulnerability,
+WGI regulatory quality (1997/1999/2001 gaps interpolated), log GDP per capita, the real interest
+rate and currency depreciation (change in log LCU per USD, winsorised at 1%/99%) — with a
+same-sample baseline, and again without the real interest rate, which is missing for many
+countries. SEs clustered by country. Rows with a missing
 regressor are dropped (`deals_growth` starts in 1996). Output: `data/processed/hazard_model.txt`.
 `region` and `income_group` (fixed per country in the PPI export) are in the country-year
 panel.

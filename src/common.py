@@ -134,7 +134,8 @@ def report_merge(left: pd.DataFrame, right: pd.DataFrame, on, label: str) -> Non
 
 
 def load_nd_gain(path, country_col="ISO3", year_col="Year",
-                  is_wide=True, wide_id_cols=("ISO3", "Name")) -> pd.DataFrame:
+                  is_wide=True, wide_id_cols=("ISO3", "Name"),
+                  value_name="nd_gain_value") -> pd.DataFrame:
     if not path.exists():
         sys.exit(f"[ND-GAIN] File not found: {path}\n"
                   f"Download from https://gain.nd.edu/our-work/country-index/download-data/")
@@ -148,7 +149,7 @@ def load_nd_gain(path, country_col="ISO3", year_col="Year",
             sys.exit(f"[ND-GAIN] Expected wide format with year columns, but found none.\n"
                       f"Columns found: {list(df.columns)}. Check wide_id_cols.")
         df = df.melt(id_vars=id_cols, value_vars=year_cols,
-                      var_name="year", value_name="nd_gain_value")
+                      var_name="year", value_name=value_name)
         df["year"] = pd.to_numeric(df["year"], errors="coerce")
         if country_col in df.columns and "iso3" not in df.columns:
             df = df.rename(columns={country_col: "iso3"})
@@ -162,9 +163,9 @@ def load_nd_gain(path, country_col="ISO3", year_col="Year",
     df = df.dropna(subset=["iso3", "year"])
     df["iso3"] = df["iso3"].astype(str).str.upper().str.strip()
     df["year"] = df["year"].astype(int)
-    df["nd_gain_value"] = pd.to_numeric(df["nd_gain_value"], errors="coerce")
+    df[value_name] = pd.to_numeric(df[value_name], errors="coerce")
 
-    panel = df.groupby(["iso3", "year"], as_index=False)["nd_gain_value"].mean()
+    panel = df.groupby(["iso3", "year"], as_index=False)[value_name].mean()
 
     print(f"[ND-GAIN] Loaded {panel['iso3'].nunique():,} countries, "
           f"years {panel['year'].min()}-{panel['year'].max()}.")
