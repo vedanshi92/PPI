@@ -1,0 +1,92 @@
+iso3,policy,country,adopted_raw,removed_raw,adopted,removed,reintroduced,status,source
+ALB,fit,Albania,2017,,2017.0,,,none,RT5
+AGO,fit,Angola,2011,,2011.0,,,none,RT5
+ARG,fit,Argentina,1998,,1998.0,,,none,RT5
+ARM,fit,Armenia,2007,,2007.0,,,none,RT5
+AZE,fit,Azerbaijan,2020,,2020.0,,,none,RT5
+BRB,fit,Barbados,2019,,2019.0,,,none,RT5
+BLR,fit,Belarus,1994,,1994.0,,,none,RT5
+BEL,fit,Belgium,Unknown Year,2021,,2021.0,,unknown_adoption,RT5
+BIH,fit,Bosnia and Herzegovina,2010,,2010.0,,,none,RT5
+BWA,fit,Botswana,2011,,2011.0,,,none,RT5
+BRA,fit,Brazil,2002,2012,2002.0,2012.0,,dated,RT5
+BGR,fit,Bulgaria,2007,2015 (reintroduced in 2020),2007.0,2015.0,2020.0,dated,RT5
+CHN,fit,China,2005,2021 (for wind; unclear if solar FIT continues),2005.0,2021.0,,dated,RT5
+TWN,fit,Chinese Taipei,2009,,2009.0,,,none,RT5
+CRI,fit,Costa Rica,2012,Unknown year,2012.0,,,unknown_removal,RT5
+CYP,fit,Cyprus,2004,,2004.0,,,none,RT5
+CZE,fit,Czech Republic,2002 (reinstated in 2016),,2002.0,,,none,RT5
+DNK,fit,Denmark,1996,,1996.0,,,none,RT5
+DOM,fit,Dominican Republic,2007,,2007.0,,,none,RT5
+ECU,fit,Ecuador,2000,2014,2000.0,2014.0,,dated,RT5
+EGY,fit,Egypt,2014,,2014.0,,,none,RT5
+EST,fit,Estonia,2003,2019,2003.0,2019.0,,dated,RT5
+FIN,fit,Finland,2010,Unknown year,2010.0,,,unknown_removal,RT5
+FRA,fit,France,2001,,2001.0,,,none,RT5
+GEO,fit,Georgia,2019,,2019.0,,,none,RT5
+DEU,fit,Germany,1990,,1990.0,,,none,RT5
+GHA,fit,Ghana,2011,,2011.0,,,none,RT5
+GRC,fit,Greece,1994,,1994.0,,,none,RT5
+HND,fit,Honduras,2013,2018,2013.0,2018.0,,dated,RT5
+HUN,fit,Hungary,2003,2018,2003.0,2018.0,,dated,RT5
+IND,fit,India,1993,2017,1993.0,2017.0,,dated,RT5
+IDN,fit,Indonesia,2002,,2002.0,,,none,RT5
+IRN,fit,Iran,2005,,2005.0,,,none,RT5
+IRQ,fit,Iraq,2018,Unknown year,2018.0,,,unknown_removal,RT5
+IRL,fit,Ireland,2005,2020 - reintroduced in 2022,2005.0,2020.0,2022.0,dated,RT5
+ISR,fit,Israel,2009,2013 (reintroduced in 208),2009.0,2013.0,,unknown_reintro,RT5
+ITA,fit,Italy,2005-2006,2013,2005.0,2013.0,,dated,RT5
+JPN,fit,Japan,2009,,2009.0,,,none,RT5
+JOR,fit,Jordan,2012,Unknown year,2012.0,,,unknown_removal,RT5
+KAZ,fit,Kazakhstan,2014,2017,2014.0,2017.0,,dated,RT5
+KEN,fit,Kenya,2008,,2008.0,,,none,RT5
+KGZ,fit,Kyrgyzstan,2009,,2009.0,,,none,RT5
+LVA,fit,Latvia,2001,2020 (on hold),2001.0,2020.0,,dated,RT5
+LSO,fit,Lesotho,2013,,2013.0,,,none,RT5
+LTU,fit,Lithuania,2002,,2002.0,,,none,RT5
+LUX,fit,Luxembourg,1994,,1994.0,,,none,RT5
+MKD,fit,"Macedonia, North",2007,,2007.0,,,none,RT5
+MWI,fit,Malawi,2012,,2012.0,,,none,RT5
+MYS,fit,Malaysia,2010,2016 (FITs for PV ended),2010.0,2016.0,,dated,RT5
+MDV,fit,Maldives,2011,,2011.0,,,none,RT5
+MUS,fit,Mauritius,2010,2012 (but it was reintroduced later on),2010.0,2012.0,,unknown_reintro,RT5
+MDA,fit,Moldova,2007,,2007.0,,,none,RT5
+MNG,fit,Mongolia,2007,,2007.0,,,none,RT5
+MNE,fit,Montenegro,2011,2020,2011.0,2020.0,,dated,RT5
+MOZ,fit,Mozambique,2014,,2014.0,,,none,RT5
+NAM,fit,Namibia,2015,Unkown year,2015.0,,,unknown_removal,RT5
+NLD,fit,Netherlands,2008,Unknown year,2008.0,,,unknown_removal,RT5
+NIC,fit,Nicaragua,2005,,2005.0,,,none,RT5
+NGA,fit,Nigeria,2015,,2015.0,,,none,RT5
+NOR,fit,Norway,Unknown Year,,,,,unknown_adoption,RT5
+OMN,fit,Oman,2017,,2017.0,,,none,RT5
+PAK,fit,Pakistan,2015,,2015.0,,,none,RT5
+PER,fit,Peru,2015,,2015.0,,,none,RT5
+PHL,fit,Philippines,2008,,2008.0,,,none,RT5
+POL,fit,Poland,2016,,2016.0,,,none,RT5
+PRT,fit,Portugal,2014,,2014.0,,,none,RT5
+KOR,fit,Republic of Korea,2001,2012,2001.0,2012.0,,dated,RT5
+RUS,fit,Russian Federation,2007,,2007.0,,,none,RT5
+RWA,fit,Rwanda,2012,,2012.0,,,none,RT5
+SAU,fit,Saudi Arabia,2020,,2020.0,,,none,RT5
+SRB,fit,Serbia,2016,,2016.0,,,none,RT5
+SVK,fit,Slovak Republic,2003,2019,2003.0,2019.0,,dated,RT5
+SVN,fit,Slovenia,2002,,2002.0,,,none,RT5
+ZAF,fit,South Africa,2009,2011 (but reintroduced in 2022 for solar),2009.0,2011.0,2022.0,dated,RT5
+ESP,fit,Spain,1999,2007,1999.0,2007.0,,dated,RT5
+LKA,fit,Sri Lanka,1997,,1997.0,,,none,RT5
+SWE,fit,Sweden,1998,Unknown year,1998.0,,,unknown_removal,RT5
+CHE,fit,Switzerland,2008,2022,2008.0,2022.0,,dated,RT5
+TJK,fit,Tajikistan,2010,,2010.0,,,none,RT5
+TZA,fit,Tanzania,2010,,2010.0,,,none,RT5
+THA,fit,Thailand,2006,,2006.0,,,none,RT5
+TTO,fit,Trinidad and Tobago,2021,,2021.0,,,none,RT5
+TUR,fit,Turkey,2005,,2005.0,,,none,RT5
+UGA,fit,Uganda,2013,2022,2013.0,2022.0,,dated,RT5
+GBR,fit,United Kingdom,2010,2020,2010.0,2020.0,,dated,RT5
+URY,fit,Uruguay,2010,,2010.0,,,none,RT5
+VNM,fit,Vietnam,2017,,2017.0,,,none,RT5
+ZMB,fit,Zambia,2017,,2017.0,,,none,RT5
+ZWE,fit,Zimbabwe,Unknown Year,,,,,unknown_adoption,RT5
+NPL,fit,NPL,,,2007.0,,,none,GSR 2025 Figure 9
+UKR,fit,UKR,,,2024.0,,,none,GSR 2025 Figure 9

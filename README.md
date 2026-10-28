@@ -1,2 +1,245 @@
-# PPI
-Codes for PPI project
+# PPI Renewable Energy Panel — Replication Code
+
+Builds a **project-country-year panel**: one row per World Bank PPI energy project, tagged
+with its country (ISO3) and financial-closure year, with country-year data from **ND-GAIN**,
+the **Worldwide Governance Indicators (WGI)** and **World Bank WDI** merged on.
+
+Step 9 then collapses it to a **balanced country-year panel** (`country_year_panel.csv`).
+
+## 1. Folder structure
+
+```
+PPI/
+├── run_all.py                  <- runs every step in order
+├── src/
+│   ├── config.py               <- file paths + settings (edit this, not the steps)
+│   ├── common.py               <- shared loaders and country -> ISO3 matching
+│   ├── step1_prepare_ppi.py    <- clean PPI, classify technology, parse sponsors
+│   ├── step2_load_ndgain.py    <- ND-GAIN wide -> country-year panel
+│   ├── step3_load_wgi.py       <- six WGI sheets -> one country-year panel
+│   ├── step4_fetch_wdi.py      <- WDI macro indicators from the World Bank API
+│   ├── step5_merge_panel.py    <- merge everything onto the projects
+│   ├── step6_summary_stats.py  <- descriptive statistics
+│   ├── step7_twfe_stacking.py  <- fixed effects regressions
+│   ├── step8_figures.py        <- summary figures
+│   ├── step9_country_year_panel.py <- balanced country-year panel
+│   ├── step10_hazard.py        <- hazard model of first de-risking
+│   ├── step11_local_projections.py <- local projections: which leads
+│   ├── step12_stacked_did.py   <- shape-matched stacked DiD
+│   └── step13_paper_figures.py <- paper figures
+├── data/                       <- committed: raw inputs, interim files and outputs
+│   ├── raw/                    <- put your downloaded files here (see step 2)
+│   ├── interim/                <- outputs of steps 1-4
+│   └── processed/              <- final panel + summary statistics
+├── requirements.txt
+└── README.md
+```
+
+## 2. Download the raw data
+
+Place each file in `data/raw/` with the filename below (rename after downloading if needed):
+
+| Dataset | Where to get it | Save as |
+|---|---|---|
+| World Bank PPI database | https://ppi.worldbankgroup.org/en/ppi -> custom query, Excel export | `data/raw/ppi.xlsx` |
+| ND-GAIN Country Index | https://gain.nd.edu/our-work/country-index/download-data/ (the `gain.csv` country time series) | `data/raw/nd_gain.csv` |
+| REN21 feed-in tariff and net metering / billing policies | REN21 GSR 2023 Supply Data Pack, table RT5 | `data/raw/ren21/GSR2023_Supply-Data-Pack.xlsx` |
+| REN21 policies in force 2024 (fallback adoption years) | REN21 Global Status Report 2025, Global Overview Figure 9 (Excel, "References" sheet) | `data/raw/ren21/GSR_2025_GO_Figure_9.xlsx` |
+| ND-GAIN vulnerability score | same ND-GAIN download (`vulnerability.csv`; `vulnerability_delta.csv` kept but unused) | `data/raw/nd_gain_vulnerability.csv` |
+| Worldwide Governance Indicators | https://www.worldbank.org/en/publication/worldwide-governance-indicators (the full Excel dataset, one sheet per dimension) | `data/raw/wgidata.xlsx` |
+
+WDI indicators are **not** downloaded by hand: step 4 fetches them from the World Bank API
+(`api.worldbank.org`) with the `wbgapi` package, so it needs internet access. If the API can't
+be reached, the pipeline still finishes. It reuses the WDI data saved by the last successful
+run, or else leaves the WDI columns blank and warns you. To change which indicators are
+pulled, edit `CONFIG["wdi_indicators"]` in `src/config.py`.
+
+The WDI series include `renewable_energy_consumption_pct` (`EG.FEC.RNEW.ZS`, renewable energy as
+% of total final energy consumption), which ends in 2021 for most countries. The fossil fuel
+share (`EG.USE.COMM.FO.ZS`) was not used: the API returns 0 for every country from 2016 on,
+so it only has real values to 2014–15.
+
+## 3. Run
+
+```bash
+pip install -r requirements.txt
+python3 run_all.py
+```
+
+Each step can also be run on its own (e.g. `python3 src/step6_summary_stats.py`) once the
+earlier steps have written their outputs.
+
+## 4. What each step does
+
+**Step 1 — PPI projects.** Keeps every original PPI column and adds a `project_id` (row number
+in the raw export). `TotalInvestment` and `Capacity` are converted to numbers as
+`investment_musd` (USD million) and `capacity`; `Not Available` / `Not Applicable` become blank.
+Capacity units differ by project (`CapacityType`: MW, thousands of connections, km, ...), so
+`capacity_mw` keeps only the MW figures. It drops:
+- rows with no year or country
+- the placeholder `**TEST**` record
+- projects with a financial-closure year outside 1990–2025 (the export contains a few
+  1900/1910/1970-era entries)
+- projects whose `Technology` is **missing or only a placeholder** (`Not Applicable`, `N/A`,
+  `Other`), since they can't be classified
+
+It then adds:
+- `technology_category`: `renewable`, `non_renewable`, or `mixed` (both kinds listed, e.g.
+  `"Coal, Hydro, Large (>50MW)"`), matched on keywords in `CONFIG`. `Waste` counts as
+  renewable, which is a judgment call you can change there. `is_renewable` (renewable or
+  mixed) and `is_pure_renewable` (renewable only) are derived from it.
+- sponsor columns, from `Sponsors Country`. Each sponsor's country is mapped to ISO3 and
+  compared with the project's ISO3, giving `n_domestic_sponsors`, `n_foreign_sponsors`,
+  `foreign_sponsor_share`, `has_domestic_sponsor`, `has_foreign_sponsor` and `sponsor_type`
+  (`domestic_only` / `foreign_only` / `mixed` / `unknown`). Sponsors listed as `..` (country
+  unknown) are counted in `n_unknown_country_sponsors` and left out of the comparison. A
+  project where no sponsor country is known gets `sponsor_type = unknown` and blank flags.
+  Hong Kong (HKG) counts as foreign for a project in China.
+
+It also adds `derisk` = 1 if `MultiLateralSupport` or `BiLateralSupport` lists a support
+type containing Guarantee, Risk Management or Insurance (e.g. `"IFC (Guarantee / $50 Million /
+2010)"`), else 0; blank or `No` is 0. The match is on the support type, not the agency name,
+so a loan from an agency like Export Finance and Insurance Corporation doesn't count.
+`derisk_multilateral` and `derisk_bilateral` give the flag for each column separately.
+`public_finance` is built the same way from Loan, Syndication or Equity (Equity also matches
+`Quasi-equity`), with `public_finance_multilateral` and `public_finance_bilateral`.
+`govt_derisk` = 1 if `InDirectGovtSupport` lists any support (payment, tariff, revenue, debt
+or exchange-rate guarantees, tax deductions/credits); blank, `Not Applicable`, `No` or `N/A` is
+0. `Not Available` is left **blank**: the field is mostly unrecorded outside 2010–2019, so
+coding it 0 would mix "no support" with "not recorded".
+`govt_finance` is built the same way from `DirectGovtSupport` (revenue subsidy, capital subsidy,
+in-kind), with `Not Available` likewise left blank.
+`any_support` = 1 if any of `derisk`, `public_finance`, `govt_derisk` or `govt_finance` is 1,
+else 0. A blank government flag counts as not 1, so `any_support` is never blank.
+`auction_deal` = 1 for a greenfield (`Type of PPI`) renewable project, other than large hydro,
+with `AwardMethod` = Competitive bidding and `BidCriteria` = Lowest tariff, Lowest subsidy
+required, Lowest cost of construction or operation, or Lowest government payments. A
+greenfield renewable project (not large hydro) is left **blank** when its `AwardMethod` is
+`Not Available`, or it was competitively bid but its `BidCriteria` is `Not Available`; every
+other project, including brownfield and divestiture deals, is 0.
+
+**Steps 2–4** reshape ND-GAIN, WGI (the governance *estimate*, about −2.5 to +2.5, for all
+six dimensions) and WDI into country-year tables keyed on `iso3` + `year`.
+
+**Step 5** left-joins them onto the projects. No project is dropped for missing ND-GAIN, WGI or
+WDI values; those cells are simply left blank. Expect gaps where a source doesn't cover a
+year: ND-GAIN starts in 1995, and WGI starts in 1996 and skips 1997, 1999 and 2001.
+Output: `data/processed/project_panel.csv`.
+
+**Step 6** writes descriptive statistics to `data/processed/summary_stats.xlsx` (one sheet per
+table) and `summary_stats.txt`. The tables cover projects and investment by technology and
+sponsor type, technology × sponsor crosstabs, projects by year, top countries, and
+descriptives with missingness for every merged variable.
+
+**Step 7** runs project-level fixed effects models (linear probability, SEs clustered by
+country, pyfixest) on renewable projects: (1) `public_finance ~ derisk`; (2) the same with
+bilateral support only; (3) multilateral support (any derisk or public finance) on bilateral
+support; (4) `derisk` on having a foreign sponsor; (5) `derisk` on award method dummies
+(reference: competitive bidding). Each is run with (a) `iso3^year + tech` fixed effects and
+(b) `iso3 + year + tech` fixed effects plus ND-GAIN and GDP growth as controls. The controls
+vary only by country-year, so (a) absorbs them. `tech` is the project's main renewable
+technology (solar, wind, hydro_large, hydro_small, geothermal, biomass, biogas, waste, or
+hybrid). Output: `data/processed/twfe_policy_stacking.txt`.
+
+**Step 8** draws project-level summary figures for renewable projects into
+`data/processed/figures/`: support by IDA status, by sponsor nationality and by technology;
+multilateral vs bilateral support over time; policy stacking (raw conditional shares);
+investment and capacity by type of support; and trends in public finance, derisking and foreign
+sponsorship. `figure_data.xlsx` holds the numbers behind every figure.
+
+**Step 9** collapses the project panel to a balanced country-year panel,
+`data/processed/country_year_panel.csv`: every country with at least one PPI energy project
+(117) for every year 1990–2024, i.e. 4,095 rows. Each row has project counts (all, renewable,
+non-renewable, mixed), total investment and capacity (all and renewable), and counts of
+projects with each support flag (all and renewable). Country-years with no project are 0, and
+projects with unreported investment count as 0 in the totals (`n_investment_missing` counts
+them). ND-GAIN, WGI and WDI are merged for every country-year, so they are only missing where
+the source has no value (ND-GAIN before 1995; WGI before 1996 and in 1997, 1999, 2001).
+
+Step 9 also builds:
+- per country-year: `n_ren` (renewable deals), `n_ren_nd` (renewable deals without derisking),
+  `ren_derisk` (1 if any renewable deal that year was derisked);
+- fixed country dates (same in every year): `treat_year` (first derisked renewable deal),
+  `entry_year` (first energy PPI deal), `first_any_derisk` (first derisked deal in any energy
+  technology), `auction_year` (first `auction_deal`); blank if never. `entry_year` and
+  `first_any_derisk` count all energy deals from 1990, including those step 1 drops for having
+  no classifiable technology (transmission, distribution, gas);
+- policy controls at t−1: `auction_active` (`auction_year` ≤ t−1); `fit_active` and
+  `nm_active` (feed-in tariff, and net metering or net billing, in force in t−1), both from
+  REN21 GSR 2023 table RT5's year adopted / removed / reintroduced. They are blank where RT5
+  lists the policy but gives no year for its adoption, removal or reintroduction (FiT: Costa
+  Rica, Iraq, Jordan, Mauritius, Namibia, Zimbabwe; net metering: Belarus). Where RT5 has no
+  adoption year, the GSR 2025 Figure 9 year is used. Parsed dates are in
+  `data/interim/ren21_fit_policies.csv` and `ren21_nm_policies.csv`; `prior_energy_derisk`
+  (`first_any_derisk` < t);
+- deal-flow history: `deals_l1_3` (renewable deals in t−1..t−3), `deals_l4_6` (t−4..t−6),
+  `deals_growth` (the difference). Blank where the window reaches before 1990.
+
+**Step 10** estimates a discrete-time hazard model of a country's first de-risked renewable
+deal ("de-risking follows the market"). Risk set: country-years from max(`entry_year`, 1993)
+to `treat_year` (never-treated countries stay to 2024); `event` = 1 in `treat_year`.
+Regressors: log(1 + `deals_l1_3`), `deals_growth`, `prior_energy_derisk`, `fit_active`,
+`nm_active`, `auction_active`. Specifications: LPM with year FE; + region and income-group FE;
+region × year FE; logit average marginal effects with year FE and with year + region + income
+FE; the same LPM and logit models plus duration dummies (years since `entry_year`: 0–2
+reference, 3–5, 6–10, 11+); complementary log-log (proportional hazards) with year + region +
+income FE, with and without duration dummies; and a Cox model with Efron ties on the same
+multiple-record data (analysis time = years since entry, delayed entry for countries that
+entered before 1993, region and income dummies; SEs from a country-cluster bootstrap). Each of
+the main models is also run with country-year controls lagged one year — ND-GAIN vulnerability,
+WGI regulatory quality (1997/1999/2001 gaps interpolated), log GDP per capita, the real interest
+rate and currency depreciation (change in log LCU per USD, winsorised at 1%/99%) — with a
+same-sample baseline, and again without the real interest rate, which is missing for many
+countries. SEs clustered by country. Rows with a missing
+regressor are dropped (`deals_growth` starts in 1996). Output: `data/processed/hazard_model.txt`.
+`region` and `income_group` (fixed per country in the PPI export) are in the country-year
+panel.
+
+**Step 11** runs local projections on the balanced zero-filled country-year panel to see
+which leads. `ldeals` = log(1 + `n_ren_nd`), `derisk` = `ren_derisk`. For h = 0–5 it
+estimates `derisk`(t+h) on `ldeals`(t) and `ldeals`(t+h) on `derisk`(t), each with two lags of
+both, country and year FE, SEs clustered by country. Coefficients are standardised by
+SD(shock) / SD(outcome). Each is also run with country-year controls lagged one year
+relative to the shock year (ND-GAIN vulnerability, WGI regulatory quality, log GDP per capita,
+currency depreciation; no real interest rate), next to a same-sample run without them. Output:
+`data/processed/local_projections.txt`, `figures/8_local_projections.png` and
+`figures/8b_local_projections_controls.png`.
+
+**Step 12** runs a shape-matched stacked DiD: does the first de-risked renewable deal
+accelerate deals without de-risking (`n_ren_nd`)? Events are treated countries with
+T−5 ≥ 1991 and T+5 ≤ 2024. Each gets the 3 nearest controls (not treated by T+5, in PPI by
+T−1), matched on the demeaned path of log(1 + `n_ren`) over T−5..T−1, with a +1 penalty for a
+different region and, if the treated country had pre-period deals, only controls that also had
+some. Blocks T−5..T+5 are stacked and a Poisson event study (reference rel = −1; unit FE,
+event × year FE; clustered by country) and a pooled treated × post model are estimated, with a
+joint pre-trend test. Output: `data/processed/stacked_did.txt`,
+`data/interim/stacked_did_matches.csv`, `figures/9_stacked_did.png`.
+
+**Step 13** draws the paper figures into `data/processed/figures/paper/` (data behind them in
+`paper_figure_data.xlsx`). Main text: (1) renewable deals and de-risked deals per year, with
+the de-risked share; (2) dumbbell of each treated country's first renewable deal and first
+de-risked renewable deal, with a histogram of the gap; (3) predicted annual hazard against
+deals in t−1..t−3 from the LPM, logit and cloglog, other variables at their means, with the
+data distribution underneath; (4) the deal-flow coefficient across specifications; (5) the
+local projections in both directions on one standardised y-axis. Appendix: standardised
+coefficients of country conditions; landmark Kaplan–Meier curves by early deal flow; year and
+years-since-entry effects; a world map of the first de-risking year (Natural Earth shapes
+bundled with geopandas 0.14.4); and the project-level stacking coefficient under three
+fixed-effect sets.
+
+## 5. Country matching
+
+Country names are matched to ISO3 codes by a manual dictionary first
+(`common.MANUAL_ISO3_FIXES`), then by an exact `pycountry` lookup. pycountry's fuzzy search is
+only a last resort, and every fuzzy match is printed so you can check it. Fuzzy search alone
+produced errors in this data, such as `Niger` → Nigeria and `Kosovo` → Serbia. If a new PPI
+export has names that don't match, the script prints them. Add them to the dictionary.
+
+## 6. Before sharing with reviewers
+
+- `data/` (raw inputs included) is committed so the pipeline can be re-run after a fresh
+  checkout. If the repository is or becomes public, check that the PPI, WGI, ND-GAIN and REN21
+  licences allow redistributing the raw files; otherwise remove `data/raw/` and point reviewers
+  to the download links above.
+- Double check `data/processed/project_panel.csv` doesn't contain anything you don't want
+  public before uploading it to a replication archive (e.g. Harvard Dataverse, OSF).

@@ -1,0 +1,25 @@
+Shape-matched stacked DiD: does the first de-risked renewable deal accelerate the market?
+Outcome: n_ren_nd (renewable deals without de-risking). Poisson, unit FE + event x year FE,
+SEs clustered by country. Coefficients are log changes; exp(b) - 1 is the % change.
+
+Events: 29 treated countries (T-5 >= 1991, T+5 <= 2024), treat years 1996-2019.
+Controls: 3 per event, 51 distinct countries; 78 of 87 matches in the same region; median distance 0.898.
+Stacked sample: 1,276 unit-years; used in Poisson: 711 (units with all-zero outcomes drop out).
+
+Pooled: n_ren_nd ~ treated x post
+  coef 0.2676 (SE 0.3697), p = 0.4692  ->  +30.7% deals after treatment
+
+Event study (reference rel = -1):
+    Estimate  Std. Error  Pr(>|t|)    2.5%   97.5%
+-5   -0.3316      0.5594    0.5533 -1.4280  0.7647
+-4   -0.1559      0.3787    0.6807 -0.8982  0.5865
+-3   -0.1761      0.3930    0.6541 -0.9464  0.5942
+-2    0.2162      0.4637    0.6410 -0.6927  1.1251
+ 0    0.4053      0.3760    0.2810 -0.3316  1.1422
+ 1    0.0916      0.4333    0.8326 -0.7577  0.9408
+ 2   -0.0106      0.6142    0.9863 -1.2143  1.1932
+ 3    0.6381      0.5445    0.2412 -0.4291  1.7053
+ 4   -0.2223      0.8587    0.7957 -1.9053  1.4606
+ 5    0.3668      0.6551    0.5756 -0.9173  1.6508
+
+Pre-trend check: joint Wald test that rel -5..-2 are all zero: chi2(4) = 1.02, p = 0.907.
